@@ -5,10 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chá Revelação - Votação</title>
     <style>
+        :root {
+            --boy-color:  rgb(63, 190, 105);
+            --girl-color: rgb(223, 143, 212);
+            --bg-boy-color: rgb(213, 245, 224);
+            --bg-girl-color: rgb(235, 186, 228);;
+        }
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background: linear-gradient(to right, #ffcccc, #ccccff);
+            background: linear-gradient(to right, var(--bg-girl-color), var(--bg-boy-color));
             color: #333;
             padding: 20px;
         }
@@ -31,7 +37,7 @@
         }
         button {
             font-size: 1.5em;
-            padding: 15px 30px;
+            padding: 15px 50px;
             margin: 10px;
             border: none;
             border-radius: 10px;
@@ -39,11 +45,11 @@
             transition: transform 0.2s;
         }
         .boy-btn {
-            background: blue;
+            background: var(--boy-color);
             color: white;
         }
         .girl-btn {
-            background: pink;
+            background: var(--girl-color);
             color: white;
         }
         button:hover {
@@ -66,10 +72,10 @@
             font-weight: bold;
         }
         .boy-bar {
-            background: blue;
+            background: var(--boy-color);
         }
         .girl-bar {
-            background: pink;
+            background: var(--girl-color);
         }
         .log-container {
             margin-top: 20px;
@@ -99,14 +105,37 @@
             font-weight: bold;
         }
         .boy-text {
-            color: blue;
+            color: var(--boy-color);
         }
         .girl-text {
-            color: pink;
+            color: var(--girl-color);
         }
         .vote-count {
             font-size: 1.5em;
             margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            gap: 10px; /* Espaçamento entre os elementos */
+        }
+        .boy-name, .girl-name {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        .boy-name {
+            justify-content: flex-end; /* Alinha Francisco à direita */
+        }
+        .name-separator {
+            text-align: center;
+            min-width: 20px; /* Define um tamanho mínimo para o separador */
+        }
+        .girl-name {
+            justify-content: flex-start; /* Alinha Cecília à esquerda */
+        }
+        .boy-name span, .girl-name span {
+            margin-left: 5px;
         }
     </style>
 </head>
@@ -119,7 +148,11 @@
         <button class="boy-btn" onclick="vote('boy')">Menino</button>
         <button class="girl-btn" onclick="vote('girl')">Menina</button>
     </div>
-    <div class="vote-count">Votos Menino: <span id="boy-count">0</span> | Votos Menina: <span id="girl-count">0</span></div>
+    <div class="vote-count">
+        <div class="boy-name"><strong>Francisco:</strong> <span id="boy-count">0</span></div>
+        <div class="name-separator"><strong>|</strong></div>
+        <div class="girl-name"><strong>Cecília:</strong> <span id="girl-count">0</span></div>
+    </div>
     <div class="progress-container">
         <div id="boy-bar" class="progress-bar boy-bar">0%</div>
         <div id="girl-bar" class="progress-bar girl-bar">0%</div>
