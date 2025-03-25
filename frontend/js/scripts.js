@@ -48,7 +48,7 @@ async function withLoading(operation) {
     // Mantém o comportamento normal: exibe o splash após 1 segundo
     loadingTimeout = setTimeout(() => {
         showLoading();
-    }, 1000); // Splash aparece após 1 segundo
+    }, 3000); // Splash aparece após 3 segundo
 
     try {
         // Executa a operação
