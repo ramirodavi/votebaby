@@ -10,13 +10,11 @@ const developmentUrl = 'http://localhost:3000/config'; // URL do backend local
 const productionWebSocket = 'wss://backend-votebaby.onrender.com'; // WebSocket em produção (Render)
 const developmentWebSocket = 'ws://localhost:3000'; // WebSocket em desenvolvimento (local)
 
-// Condicional única para configurar URLs
+// Configuração dinâmica das URLs
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // URLs para ambiente de desenvolvimento (local)
     webSocketUrl = developmentWebSocket; // WebSocket local
     configUrl = developmentUrl; // Configuração local
 } else {
-    // URLs para ambiente de produção
     webSocketUrl = productionWebSocket; // WebSocket em produção
     configUrl = productionUrl; // Configuração em produção
 }
@@ -45,25 +43,30 @@ function hideLoading() {
 async function withLoading(operation) {
     let loadingTimeout;
 
-    // Mantém o comportamento normal: exibe o splash após 1 segundo
     loadingTimeout = setTimeout(() => {
         showLoading();
-    }, 3000); // Splash aparece após 3 segundo
+    }, 3000); // Exibe o splash após 3 segundos
 
     try {
-        // Executa a operação
         await operation();
     } catch (err) {
         console.error('Erro durante operação:', err.message);
-        alert(err.message); // Exibe o erro para o usuário
-        throw err; // Repassa o erro para que o fluxo continue corretamente
+        alert(err.message);
+        throw err;
     } finally {
-        // Sempre remove o splash
         clearTimeout(loadingTimeout);
         hideLoading();
     }
 }
 
+// Gerar ou recuperar o browserId
+let browserId = localStorage.getItem('browserId');
+if (!browserId) {
+    browserId = crypto.randomUUID(); // Gera um identificador único
+    localStorage.setItem('browserId', browserId);
+}
+
+// Carrega a configuração inicial
 async function loadConfig() {
     await withLoading(async () => {
         const response = await fetch(configUrl);
@@ -79,19 +82,20 @@ async function loadConfig() {
     });
 }
 
-// Função principal para iniciar a configuração
+// Inicializa a aplicação
 async function initializeApp() {
     try {
         await loadConfig();
         initializeWebSocket();
         await loadVotes();
+        await loadComments(); // Carrega os comentários
     } catch (error) {
         console.error('Erro na inicialização da aplicação:', error.message);
         alert('Erro ao inicializar a aplicação. Verifique sua conexão.');
     }
 }
 
-// Função para inicializar o WebSocket
+// Inicializa o WebSocket
 function initializeWebSocket() {
     const socket = new WebSocket(webSocketUrl);
 
@@ -103,7 +107,7 @@ function initializeWebSocket() {
         try {
             const data = JSON.parse(event.data);
             console.log('Mensagem recebida via WebSocket:', data);
-            await loadVotes(); // Carrega os votos dinamicamente ao receber mensagens
+            await loadVotes();
         } catch (err) {
             console.error('Erro ao processar mensagem do WebSocket:', err.message);
         }
@@ -118,19 +122,10 @@ function initializeWebSocket() {
     };
 }
 
-// Chamando a função inicial no evento onload
-window.onload = initializeApp;
-
-// Gerar ou recuperar o browserId
-let browserId = localStorage.getItem('browserId');
-if (!browserId) {
-    browserId = crypto.randomUUID(); // Gera um identificador único
-    localStorage.setItem('browserId', browserId);
-}
-
+// Carrega os votos
 async function loadVotes() {
     await withLoading(async () => {
-        const response = await fetch(apiUrl);
+        const response = await fetch(`${apiUrl}/votes`);
 
         if (!response.ok) {
             throw new Error('Erro ao carregar votos. Por favor, tente novamente mais tarde.');
@@ -141,6 +136,7 @@ async function loadVotes() {
     });
 }
 
+// Submete um voto
 async function submitVote(name, gender) {
     const formattedName = name.trim().split(' ')
         .slice(0, 2)
@@ -148,7 +144,7 @@ async function submitVote(name, gender) {
         .join(' ');
 
     await withLoading(async () => {
-        const response = await fetch(apiUrl, {
+        const response = await fetch(`${apiUrl}/votes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: formattedName, gender, browserId })
@@ -164,10 +160,11 @@ async function submitVote(name, gender) {
     });
 }
 
+// Exclui um voto
 async function deleteVote(id) {
     if (confirm('Você realmente deseja excluir este voto?')) {
         await withLoading(async () => {
-            const response = await fetch(`${apiUrl}/${id}`, {
+            const response = await fetch(`${apiUrl}/votes/${id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ browserId })
@@ -192,7 +189,6 @@ async function vote(gender) {
         alert('Por favor, digite seu nome antes de votar!');
         return;
     }
-
     // Envolvendo a operação em withLoading
     await withLoading(async () => {
         await submitVote(name, gender); // Executa o envio do voto
@@ -245,6 +241,113 @@ function triggerCelebration(gender) {
     }, 3000);
 }
 
+// Carrega os comentários
+async function loadComments() {
+    await withLoading(async () => {
+        const response = await fetch(`${apiUrl}/comments`);
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar comentários. Por favor, tente novamente mais tarde.');
+        }
+
+        const comments = await response.json();
+        updateCommentUI(comments);
+    });
+}
+
+// Exclui um comentário
+async function deleteComment(id) {
+    const confirmation = confirm('Você realmente deseja excluir este comentário?');
+
+    if (confirmation) {
+        const commentsEndpoint = `${apiUrl}/comments/${id}`;
+
+        await withLoading(async () => {
+            const response = await fetch(commentsEndpoint, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ browserId }) // Envia o browserId para validação
+            });
+
+            if (!response.ok) {
+                throw new Error('Você não tem permissão para excluir este comentário.');
+            }
+
+            await loadComments();
+        });
+    }
+}
+
+async function submitComment(event) {
+    event.preventDefault();
+
+    let name = document.getElementById('comment-name').value.trim();
+    const message = document.getElementById('comment-message').value.trim();
+
+    if (!name || !message) {
+        alert('Por favor, preencha todos os campos.');
+        return;
+    }
+
+    // Formata o nome: apenas dois primeiros nomes com a inicial maiúscula
+    name = name.split(' ')
+        .slice(0, 2)
+        .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
+        .join(' ');
+
+    await withLoading(async () => {
+        const response = await fetch(`${apiUrl}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                message,
+                browserId // Inclui o browserId no envio
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao enviar comentário. Por favor, tente novamente mais tarde.');
+        }
+
+        await loadComments(); // Recarrega os comentários após o envio
+    });
+
+    document.getElementById('comment-form').reset(); // Limpa o formulário após o envio
+}
+
+// Atualiza os comentários na interface
+function updateCommentUI(comments) {
+    const commentLog = document.getElementById('comment-log');
+    commentLog.innerHTML = '';
+
+    comments.forEach(comment => {
+        const entry = document.createElement('div');
+        entry.classList.add('comment-entry');
+
+        const authorSpan = document.createElement('span');
+        authorSpan.textContent = comment.name;
+        authorSpan.classList.add('author');
+
+        const messageP = document.createElement('p');
+        messageP.textContent = comment.message;
+
+        const timestampSpan = document.createElement('span');
+        timestampSpan.textContent = new Date(comment.created_at).toLocaleString();
+        timestampSpan.classList.add('timestamp');
+
+        // Permitir exclusão ao clicar no comentário
+        entry.onclick = () => deleteComment(comment.id);
+
+        entry.appendChild(authorSpan);
+        entry.appendChild(messageP);
+        entry.appendChild(timestampSpan);
+
+        commentLog.appendChild(entry);
+    });
+}
+
+// Atualiza UI dos votos
 function updateUI(votes) {
     const boyVotes = votes.filter(v => v.gender === 'boy').length;
     const girlVotes = votes.filter(v => v.gender === 'girl').length;
@@ -282,3 +385,9 @@ function updateUI(votes) {
         log.appendChild(entry);
     });
 }
+
+// Inicializa o quadro de comentários
+document.getElementById('comment-form').addEventListener('submit', submitComment);
+
+// Inicializa a aplicação ao carregar a página
+window.onload = initializeApp;

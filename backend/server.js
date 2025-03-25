@@ -6,7 +6,7 @@ const WebSocket = require('ws');
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Porta do servidor
-const API_URL = process.env.API_URL || 'http://localhost:3000/votes'; // URL da API configurável
+const API_URL = process.env.API_URL || 'http://localhost:3000'; // URL da API configurável
 
 app.use(express.static('frontend')); // Sirva o frontend diretamente
 
@@ -44,8 +44,6 @@ app.get('/config', (req, res) => {
 
 // Endpoint para obter todos os votos
 app.get('/votes', async (req, res) => {
-    // Simula atraso no backend
-    // await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos de atraso
     try {
         const result = await pool.query('SELECT * FROM votes');
         res.json(result.rows);
@@ -59,27 +57,22 @@ app.get('/votes', async (req, res) => {
 app.post('/votes', async (req, res) => {
     const { name, gender, browserId } = req.body;
 
-    // Validação e formatação de nome: apenas dois primeiros nomes com a primeira letra maiúscula
     const formattedName = name.trim().split(' ')
         .slice(0, 2)
         .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
         .join(' ');
 
     try {
-        // Verifica se já existe um voto com o mesmo nome e browserId
         const existingVote = await pool.query('SELECT * FROM votes WHERE name = $1 AND browser_id = $2', [formattedName, browserId]);
 
         if (existingVote.rows.length > 0) {
-            // Atualiza o voto existente
             await pool.query('UPDATE votes SET gender = $1 WHERE name = $2 AND browser_id = $3', [gender, formattedName, browserId]);
             res.json({ message: 'Voto atualizado com sucesso!' });
         } else {
-            // Insere um novo voto
             await pool.query('INSERT INTO votes (name, gender, browser_id) VALUES ($1, $2, $3)', [formattedName, gender, browserId]);
             res.status(201).json({ message: 'Voto registrado com sucesso!' });
         }
 
-        // Notifica os clientes WebSocket sobre a atualização
         notifyClients({ action: 'update', name: formattedName, gender });
     } catch (err) {
         console.error('Erro ao registrar ou atualizar voto:', err.message);
@@ -93,22 +86,79 @@ app.delete('/votes/:id', async (req, res) => {
     const { browserId } = req.body;
 
     try {
-        // Verifica se o voto pertence ao browserId atual
         const result = await pool.query('SELECT * FROM votes WHERE id = $1 AND browser_id = $2', [id, browserId]);
 
         if (result.rows.length === 0) {
             return res.status(403).json({ error: 'Você não tem permissão para excluir este voto.' });
         }
 
-        // Exclui o voto
         await pool.query('DELETE FROM votes WHERE id = $1', [id]);
         res.json({ message: 'Voto removido com sucesso!' });
 
-        // Notifica os clientes WebSocket sobre a exclusão
         notifyClients({ action: 'delete', id });
     } catch (err) {
         console.error('Erro ao excluir voto:', err.message);
         res.status(500).json({ error: 'Erro ao excluir voto.', details: err.message });
+    }
+});
+
+// Endpoint para obter todos os comentários
+app.get('/comments', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM comments ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Erro ao buscar comentários:', err.message);
+        res.status(500).json({ error: 'Erro ao buscar comentários.', details: err.message });
+    }
+});
+
+// Endpoint para adicionar um novo comentário
+app.post('/comments', async (req, res) => {
+    const { name, message, browserId } = req.body;
+
+    if (!name || !message) {
+        return res.status(400).json({ error: 'Nome e mensagem são obrigatórios.' });
+    }
+
+    // Formata o nome: apenas dois primeiros nomes com a primeira letra maiúscula
+    const formattedName = name.trim().split(' ')
+        .slice(0, 2)
+        .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
+        .join(' ');
+
+    try {
+        // Insere o comentário no banco
+        await pool.query(
+            'INSERT INTO comments (name, message, browser_id) VALUES ($1, $2, $3)',
+            [formattedName, message, browserId]
+        );
+        res.status(201).json({ message: 'Comentário adicionado com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao adicionar comentário:', err.message);
+        res.status(500).json({ error: 'Erro ao adicionar comentário.', details: err.message });
+    }
+});
+
+// Endpoint para excluir comentários
+app.delete('/comments/:id', async (req, res) => {
+    const { id } = req.params;
+    const { browserId } = req.body;
+
+    try {
+        // Verifica se o comentário pertence ao browserId atual
+        const result = await pool.query('SELECT * FROM comments WHERE id = $1 AND browser_id = $2', [id, browserId]);
+
+        if (result.rows.length === 0) {
+            return res.status(403).json({ error: 'Você não tem permissão para excluir este comentário.' });
+        }
+
+        // Exclui o comentário
+        await pool.query('DELETE FROM comments WHERE id = $1', [id]);
+        res.json({ message: 'Comentário removido com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao excluir comentário:', err.message);
+        res.status(500).json({ error: 'Erro ao excluir comentário.', details: err.message });
     }
 });
 
@@ -118,7 +168,7 @@ const server = app.listen(PORT, () => {
 });
 
 // Configuração do WebSocket
-const wss = new WebSocket.Server({ server }); // Reutiliza o servidor HTTP
+const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
     console.log('Cliente conectado via WebSocket');
@@ -126,7 +176,6 @@ wss.on('connection', (ws) => {
     ws.on('message', (message) => {
         try {
             console.log(`Mensagem recebida do cliente: ${message}`);
-            // Aqui você pode implementar lógica adicional para processar as mensagens do cliente
         } catch (err) {
             console.error('Erro ao processar mensagem do cliente WebSocket:', err.message);
         }
@@ -140,7 +189,7 @@ function notifyClients(data) {
     console.log('Enviando dados para os clientes WebSocket:', data);
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(data)); // Envia os dados atualizados para os clientes
+            client.send(JSON.stringify(data));
         }
     });
 }

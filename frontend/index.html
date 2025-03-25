@@ -30,6 +30,15 @@
         <h3>Histórico de Votos</h3>
         <div class="vote-log" id="log"></div>
     </div>
-    <script src="./js/scripts.js"></script>
+    <div class="comment-container">
+        <h3>Comentários</h3>
+        <form id="comment-form" class="comment-form">
+            <input type="text" id="comment-name" placeholder="Seu nome" required>
+            <textarea id="comment-message" placeholder="Digite seu comentário..." required></textarea>
+            <button type="submit">Enviar</button>
+        </form>
+        <div class="comment-log" id="comment-log"></div>
+    </div>
+    <script src="./js/scripts.js"></script>    
 </body>
 </html>
