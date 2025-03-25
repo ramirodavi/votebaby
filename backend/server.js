@@ -2,7 +2,7 @@ require('dotenv').config(); // Carrega variáveis de ambiente do arquivo .env
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
-
+const WebSocket = require('ws');
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Porta do servidor
@@ -76,6 +76,9 @@ app.post('/votes', async (req, res) => {
             await pool.query('INSERT INTO votes (name, gender, browser_id) VALUES ($1, $2, $3)', [formattedName, gender, browserId]);
             res.status(201).json({ message: 'Voto registrado com sucesso!' });
         }
+
+        // Notifica os clientes WebSocket sobre a atualização
+        notifyClients({ action: 'update', name: formattedName, gender });
     } catch (err) {
         console.error('Erro ao registrar ou atualizar voto:', err.message);
         res.status(500).json({ error: 'Erro ao registrar ou atualizar voto.', details: err.message });
@@ -98,13 +101,44 @@ app.delete('/votes/:id', async (req, res) => {
         // Exclui o voto
         await pool.query('DELETE FROM votes WHERE id = $1', [id]);
         res.json({ message: 'Voto removido com sucesso!' });
+
+        // Notifica os clientes WebSocket sobre a exclusão
+        notifyClients({ action: 'delete', id });
     } catch (err) {
         console.error('Erro ao excluir voto:', err.message);
         res.status(500).json({ error: 'Erro ao excluir voto.', details: err.message });
     }
 });
 
-// Inicializa o servidor
-app.listen(PORT, () => {
+// Inicializa o servidor HTTP para Express
+const server = app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 });
+
+// Configuração do WebSocket
+const wss = new WebSocket.Server({ server }); // Reutiliza o servidor HTTP
+
+wss.on('connection', (ws) => {
+    console.log('Cliente conectado via WebSocket');
+
+    ws.on('message', (message) => {
+        try {
+            console.log(`Mensagem recebida do cliente: ${message}`);
+            // Aqui você pode implementar lógica adicional para processar as mensagens do cliente
+        } catch (err) {
+            console.error('Erro ao processar mensagem do cliente WebSocket:', err.message);
+        }
+    });
+
+    ws.send(JSON.stringify({ message: 'Conexão WebSocket estabelecida com sucesso!' }));
+});
+
+// Função para notificar os clientes conectados via WebSocket
+function notifyClients(data) {
+    console.log('Enviando dados para os clientes WebSocket:', data);
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data)); // Envia os dados atualizados para os clientes
+        }
+    });
+}

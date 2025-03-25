@@ -1,47 +1,94 @@
 let apiUrl;
+let webSocketUrl;
+let configUrl;
 
 // Define as URLs de desenvolvimento e produção
 const productionUrl = 'https://backend-votebaby.onrender.com/config'; // URL do backend no Render
 const developmentUrl = 'http://localhost:3000/config'; // URL do backend local
 
+// Define as URLs de WebSocket para produção e desenvolvimento
+const productionWebSocket = 'wss://backend-votebaby.onrender.com'; // WebSocket em produção (Render)
+const developmentWebSocket = 'ws://localhost:3000'; // WebSocket em desenvolvimento (local)
+
+// Condicional única para configurar URLs
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // URLs para ambiente de desenvolvimento (local)
+    webSocketUrl = developmentWebSocket; // WebSocket local
+    configUrl = developmentUrl; // Configuração local
+} else {
+    // URLs para ambiente de produção
+    webSocketUrl = productionWebSocket; // WebSocket em produção
+    configUrl = productionUrl; // Configuração em produção
+}
+
 async function loadConfig() {
     try {
-        // Tenta primeiro a URL de produção
-        const response = await fetch(productionUrl);
+        // Realiza apenas uma requisição à URL configurada dinamicamente
+        const response = await fetch(configUrl);
 
-        if (!response.ok) throw new Error('Falha ao conectar à produção');
-        
+        if (!response.ok) {
+            console.warn(`Falha ao carregar configuração. Status: ${response.status}`);
+            alert('Erro ao carregar configuração. Por favor, tente novamente mais tarde.');
+            return;
+        }
+
         const config = await response.json();
         apiUrl = config.apiUrl; // Atribui a URL da API
-        console.log('Conectado ao ambiente de produção:', apiUrl);
+        console.log(`Configuração carregada com sucesso: ${apiUrl}`);
     } catch (err) {
-        console.warn('Erro ao conectar ao ambiente de produção:', err.message);
-
-        try {
-            // Se falhar, tenta a URL de desenvolvimento
-            const response = await fetch(developmentUrl);
-
-            if (!response.ok) throw new Error('Falha ao conectar ao desenvolvimento');
-
-            const config = await response.json();
-            apiUrl = config.apiUrl; // Atribui a URL da API
-            console.log('Conectado ao ambiente de desenvolvimento:', apiUrl);
-        } catch (err) {
-            console.error('Erro ao conectar ao backend em ambos os ambientes:', err.message);
-            alert('Erro ao carregar a configuração do backend. Verifique sua conexão.');
-        }
+        console.error('Erro ao conectar ao backend:', err.message);
+        alert('Erro ao conectar ao backend. Verifique sua conexão.');
     }
 }
 
-window.onload = async function () {
+// Função principal para iniciar a configuração
+async function initializeApp() {
     try {
+        // Aguarda o carregamento da configuração (carrega apiUrl)
         await loadConfig();
+
+        // Inicializa o WebSocket apenas após o loadConfig
+        initializeWebSocket();
+
+        // Carrega os votos apenas após a URL ser configurada
         await loadVotes();
-    } catch (err) {
-        console.error('Erro ao inicializar a aplicação:', err.message);
-        alert('Erro ao inicializar a aplicação. Verifique a conexão com o backend.');
+    } catch (error) {
+        console.error('Erro na inicialização da aplicação:', error.message);
+        alert('Erro ao inicializar a aplicação. Verifique sua conexão.');
     }
-};
+}
+
+// Função para inicializar o WebSocket
+function initializeWebSocket() {
+    const socket = new WebSocket(webSocketUrl);
+
+    socket.onopen = () => {
+        console.log('Conexão com WebSocket estabelecida:', webSocketUrl);
+    };
+
+    socket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            console.log('Mensagem recebida via WebSocket:', data);
+
+            // Carrega os votos dinamicamente ao receber mensagens
+            loadVotes();
+        } catch (err) {
+            console.error('Erro ao processar mensagem do WebSocket:', err.message);
+        }
+    };
+
+    socket.onerror = (error) => {
+        console.error('Erro no WebSocket:', error);
+    };
+
+    socket.onclose = () => {
+        console.warn('Conexão com WebSocket encerrada');
+    };
+}
+
+// Chamando a função inicial no evento onload
+window.onload = initializeApp;
 
 // Gerar ou recuperar o browserId
 let browserId = localStorage.getItem('browserId');
