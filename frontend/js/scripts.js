@@ -121,6 +121,50 @@ function vote(gender) {
 
     submitVote(name, gender);
     nameInput.value = '';
+
+    // Inicia animação de celebração
+    triggerCelebration(gender);
+}
+
+function triggerCelebration(gender) {
+    const confettiContainer = document.createElement('div');
+    confettiContainer.classList.add('confetti-container');
+    document.body.appendChild(confettiContainer);
+
+    // Obtém as variáveis de cor do CSS
+    const rootStyles = getComputedStyle(document.documentElement);
+    const boyColor = rootStyles.getPropertyValue('--boy-color').trim();
+    const girlyColor = rootStyles.getPropertyValue('--girl-color').trim();
+
+    // Escolhe a cor dos balões e confetes com base no gênero
+    const color = gender === 'boy' ? boyColor : girlyColor;
+
+    // Animação de balões
+    for (let i = 0; i < 10; i++) {
+        const balloon = document.createElement('div');
+        balloon.classList.add('balloon');
+        balloon.style.backgroundColor = color; // Aplica a cor dinâmica
+        balloon.style.left = `${Math.random() * 100}%`;
+        balloon.style.animationDelay = `${Math.random() * 0.5}s`;
+
+        confettiContainer.appendChild(balloon);
+    }
+
+    // Animação de confetes
+    for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.classList.add('confetti');
+        confetti.style.backgroundColor = Math.random() > 0.5 ? color : '#FFF'; // Mistura com branco
+        confetti.style.left = `${Math.random() * 100}%`;
+        confetti.style.animationDelay = `${Math.random() * 0.3}s`;
+
+        confettiContainer.appendChild(confetti);
+    }
+
+    // Remove os elementos depois de 3 segundos
+    setTimeout(() => {
+        confettiContainer.remove();
+    }, 3000);
 }
 
 function updateUI(votes) {
