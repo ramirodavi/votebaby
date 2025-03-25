@@ -1,7 +1,7 @@
 let apiUrl;
 
 // Define as URLs de desenvolvimento e produção
-const productionUrl = 'https://seu-backend.onrender.com/config'; // URL do backend no Render
+const productionUrl = 'https://backend-votebaby.onrender.com/config'; // URL do backend no Render
 const developmentUrl = 'http://localhost:3000/config'; // URL do backend local
 
 async function loadConfig() {
