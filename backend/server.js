@@ -45,7 +45,7 @@ app.get('/config', (req, res) => {
 // Endpoint para obter todos os votos
 app.get('/votes', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM votes');
+        const result = await pool.query('SELECT * FROM votes ORDER BY id');
         res.json(result.rows);
     } catch (err) {
         console.error('Erro ao buscar votos:', err.message);
@@ -105,7 +105,7 @@ app.delete('/votes/:id', async (req, res) => {
 // Endpoint para obter todos os comentários
 app.get('/comments', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM comments ORDER BY created_at DESC');
+        const result = await pool.query('SELECT * FROM comments ORDER BY id DESC');
         res.json(result.rows);
     } catch (err) {
         console.error('Erro ao buscar comentários:', err.message);
