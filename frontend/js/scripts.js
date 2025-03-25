@@ -21,36 +21,69 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
     configUrl = productionUrl; // Configuração em produção
 }
 
-async function loadConfig() {
+// Adiciona o splash de carregamento na página
+function showLoading() {
+    const overlay = document.createElement('div');
+    overlay.id = 'loading-overlay';
+    overlay.innerHTML = `
+        <div class="loading-popup">
+            <p>Carregando dados...</p>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+// Remove o splash de carregamento da página
+function hideLoading() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+// Envolve uma função assíncrona com o splash e timeout
+async function withLoading(operation) {
+    let loadingTimeout;
+
+    // Mantém o comportamento normal: exibe o splash após 1 segundo
+    loadingTimeout = setTimeout(() => {
+        showLoading();
+    }, 1000); // Splash aparece após 1 segundo
+
     try {
-        // Realiza apenas uma requisição à URL configurada dinamicamente
+        // Executa a operação
+        await operation();
+    } catch (err) {
+        console.error('Erro durante operação:', err.message);
+        alert(err.message); // Exibe o erro para o usuário
+        throw err; // Repassa o erro para que o fluxo continue corretamente
+    } finally {
+        // Sempre remove o splash
+        clearTimeout(loadingTimeout);
+        hideLoading();
+    }
+}
+
+async function loadConfig() {
+    await withLoading(async () => {
         const response = await fetch(configUrl);
 
         if (!response.ok) {
             console.warn(`Falha ao carregar configuração. Status: ${response.status}`);
-            alert('Erro ao carregar configuração. Por favor, tente novamente mais tarde.');
-            return;
+            throw new Error('Erro ao carregar configuração. Por favor, tente novamente mais tarde.');
         }
 
         const config = await response.json();
         apiUrl = config.apiUrl; // Atribui a URL da API
         console.log(`Configuração carregada com sucesso: ${apiUrl}`);
-    } catch (err) {
-        console.error('Erro ao conectar ao backend:', err.message);
-        alert('Erro ao conectar ao backend. Verifique sua conexão.');
-    }
+    });
 }
 
 // Função principal para iniciar a configuração
 async function initializeApp() {
     try {
-        // Aguarda o carregamento da configuração (carrega apiUrl)
         await loadConfig();
-
-        // Inicializa o WebSocket apenas após o loadConfig
         initializeWebSocket();
-
-        // Carrega os votos apenas após a URL ser configurada
         await loadVotes();
     } catch (error) {
         console.error('Erro na inicialização da aplicação:', error.message);
@@ -66,13 +99,11 @@ function initializeWebSocket() {
         console.log('Conexão com WebSocket estabelecida:', webSocketUrl);
     };
 
-    socket.onmessage = (event) => {
+    socket.onmessage = async (event) => {
         try {
             const data = JSON.parse(event.data);
             console.log('Mensagem recebida via WebSocket:', data);
-
-            // Carrega os votos dinamicamente ao receber mensagens
-            loadVotes();
+            await loadVotes(); // Carrega os votos dinamicamente ao receber mensagens
         } catch (err) {
             console.error('Erro ao processar mensagem do WebSocket:', err.message);
         }
@@ -98,66 +129,62 @@ if (!browserId) {
 }
 
 async function loadVotes() {
-    try {
+    await withLoading(async () => {
         const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar votos. Por favor, tente novamente mais tarde.');
+        }
+
         const votes = await response.json();
         updateUI(votes);
-    } catch (err) {
-        console.error('Erro ao carregar votos:', err.message);
-        alert('Erro ao carregar votos. Por favor, tente novamente mais tarde.');
-    }
+    });
 }
 
 async function submitVote(name, gender) {
-    // Extrair e formatar apenas o primeiro e segundo nome
-    const formattedName = name.trim().split(' ').slice(0, 2)
+    const formattedName = name.trim().split(' ')
+        .slice(0, 2)
         .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
         .join(' ');
 
-    try {
+    await withLoading(async () => {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: formattedName, gender, browserId })
         });
 
-        if (response.ok) {
-            await loadVotes();
-        } else {
+        if (!response.ok) {
             const errorMessage = await response.text();
             console.error('Erro ao registrar voto:', errorMessage);
-            alert('Erro ao registrar voto. Por favor, tente novamente.');
+            throw new Error('Erro ao registrar voto. Por favor, tente novamente.');
         }
-    } catch (err) {
-        console.error('Erro ao registrar voto:', err.message);
-        alert('Erro ao registrar voto. Por favor, tente novamente.');
-    }
+
+        await loadVotes();
+    });
 }
 
 async function deleteVote(id) {
     if (confirm('Você realmente deseja excluir este voto?')) {
-        try {
+        await withLoading(async () => {
             const response = await fetch(`${apiUrl}/${id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ browserId })
             });
 
-            if (response.ok) {
-                await loadVotes();
-            } else {
+            if (!response.ok) {
                 const errorMessage = await response.text();
                 console.error('Erro ao excluir voto:', errorMessage);
-                alert('Você não tem permissão para excluir este voto.');
+                throw new Error('Você não tem permissão para excluir este voto.');
             }
-        } catch (err) {
-            console.error('Erro ao excluir voto:', err.message);
-            alert('Erro ao excluir voto. Por favor, tente novamente.');
-        }
+
+            await loadVotes();
+        });
     }
 }
 
-function vote(gender) {
+async function vote(gender) {
     const nameInput = document.getElementById('name-input');
     const name = nameInput.value.trim();
 
@@ -166,7 +193,11 @@ function vote(gender) {
         return;
     }
 
-    submitVote(name, gender);
+    // Envolvendo a operação em withLoading
+    await withLoading(async () => {
+        await submitVote(name, gender); // Executa o envio do voto
+    });
+
     nameInput.value = '';
 
     // Inicia animação de celebração

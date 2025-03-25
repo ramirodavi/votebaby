@@ -44,6 +44,8 @@ app.get('/config', (req, res) => {
 
 // Endpoint para obter todos os votos
 app.get('/votes', async (req, res) => {
+    // Simula atraso no backend
+    // await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos de atraso
     try {
         const result = await pool.query('SELECT * FROM votes');
         res.json(result.rows);
