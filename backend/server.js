@@ -169,19 +169,36 @@ const server = app.listen(PORT, () => {
 
 // Configuração do WebSocket
 const wss = new WebSocket.Server({ server });
+const { v4: uuidv4 } = require('uuid');
+const useragent = require('useragent');
 
-wss.on('connection', (ws) => {
-    console.log('Cliente conectado via WebSocket');
+wss.on('connection', (ws, req) => {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-    ws.on('message', (message) => {
-        try {
-            console.log(`Mensagem recebida do cliente: ${message}`);
-        } catch (err) {
-            console.error('Erro ao processar mensagem do cliente WebSocket:', err.message);
-        }
-    });
+    const userAgentString = req.headers['user-agent']; // Captura o User-Agent original
+    const agent = useragent.parse(userAgentString); // Analisa o User-Agent
+    const browser = agent.family; // Navegador (ex.: Chrome, Firefox)
+    const version = agent.toVersion(); // Versão do navegador
+    const os = agent.os.toString(); // Sistema operacional (ex.: Windows 10, macOS)
+    const device = agent.device.toString(); // Dispositivo (ex.: iPhone, Desktop)
 
-    ws.send(JSON.stringify({ message: 'Conexão WebSocket estabelecida com sucesso!' }));
+    const connectionTime = new Date().toISOString();    
+    const clientId = uuidv4();
+
+    // Log formatado com as informações organizadas
+    console.log(`Cliente conectado via WebSocket:
+        IP: ${clientIp},
+        Navegador: ${browser} ${version},
+        Sistema Operacional: ${os},
+        Dispositivo: ${device},
+        Hora da conexão: ${connectionTime},
+        ID do cliente: ${clientId}`);
+    
+    // ws.on('message', (message) => {
+    //     console.log(`Mensagem recebida do cliente (${clientId}): ${message}`);
+    // });
+
+    // ws.send(JSON.stringify({ message: 'Conexão WebSocket estabelecida com sucesso!' }));
 });
 
 // Função para notificar os clientes conectados via WebSocket
