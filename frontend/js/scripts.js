@@ -430,7 +430,7 @@ document.getElementById('comment-form').addEventListener('submit', submitComment
 window.onload = () => {
     initializeApp();
     // Inicializa o scroll automático ao carregar a página
-    iniciarScrollAutomatico(1, 35);  // Valores padrões: 2 pixels por 30 ms
+    // iniciarScrollAutomatico(1, 35);  // Valores padrões: 2 pixels por 30 ms
 
     const div = document.getElementById('revelacao');
     div.style.opacity = 0; // Começa invisível
