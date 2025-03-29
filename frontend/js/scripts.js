@@ -431,4 +431,16 @@ window.onload = () => {
     initializeApp();
     // Inicializa o scroll automático ao carregar a página
     iniciarScrollAutomatico(1, 35);  // Valores padrões: 2 pixels por 30 ms
+
+    const div = document.getElementById('revelacao');
+    div.style.opacity = 0; // Começa invisível
+    let opacity = 0;
+
+    // Animação para aparecer suavemente
+    const fadeIn = setInterval(() => {
+        opacity += 0.02; // Incrementa a opacidade
+        div.style.opacity = opacity;
+
+        if (opacity >= 1) clearInterval(fadeIn); // Para a animação quando visível
+    }, 30);    
 };
