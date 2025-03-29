@@ -444,3 +444,40 @@ window.onload = () => {
         if (opacity >= 1) clearInterval(fadeIn); // Para a animação quando visível
     }, 30);    
 };
+
+document.addEventListener("DOMContentLoaded", () => {
+    const balloonContainer = document.querySelector(".balloon-container");
+
+    function createBalloon() {
+        const balloon = document.createElement("div");
+        balloon.classList.add("balloon");
+        balloon.style.left = Math.random() * 100 + "vw";
+        balloon.style.animationDuration = Math.random() * 5 + 5 + "s";
+        balloonContainer.appendChild(balloon);
+
+        // Remover balão após a animação
+        balloon.addEventListener("animationend", () => {
+            balloon.remove();
+        });
+    }
+
+    function createConfetti() {
+        const confetti = document.createElement("div");
+        confetti.classList.add("confetti");
+        confetti.style.left = Math.random() * 100 + "vw";
+        confetti.style.animationDuration = Math.random() * 3 + 2 + "s";
+        confetti.style.backgroundColor = Math.random() > 0.5 ? "#d8b4f8" : "#c4b5fd"; // Alterna entre tons de lilás
+        balloonContainer.appendChild(confetti);
+
+        // Remover confete após a animação
+        confetti.addEventListener("animationend", () => {
+            confetti.remove();
+        });
+    }
+
+    // Gerar balões e confetes a cada 500ms
+    setInterval(() => {
+        createBalloon();
+        createConfetti();
+    }, 500);
+});

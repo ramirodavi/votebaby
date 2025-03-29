@@ -188,8 +188,10 @@ button:hover {
     position: absolute;
     width: 10px;
     height: 10px;
+    background-color: #d8b4f8; /* Cor lilás */
     border-radius: 50%;
-    animation: fall 2.5s ease-out infinite;
+    animation: fall 3s ease-out infinite;
+    opacity: 0.8;
 }
 
 /* Animação para balões subirem */
@@ -204,11 +206,13 @@ button:hover {
 
 /* Animação para confetes caírem */
 @keyframes fall {
-    from {
-        transform: translateY(-10vh);
+    0% {
+        transform: translateY(-10vh) rotate(0deg);
+        opacity: 1;
     }
-    to {
-        transform: translateY(100vh);
+    100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
     }
 }
 
@@ -271,4 +275,85 @@ button:hover {
 
 #comment-form button:hover {
     transform: scale(1.03);
+}
+
+/* Estilo para a div "revelacao" */
+.revelacao {
+    background: linear-gradient(135deg, rgb(219, 130, 207), rgb(231, 179, 223)); /* Gradiente com tons de roxo */
+    color: white;
+    text-align: center;
+    padding: 50px;
+    font-size: 2.5em;
+    border-radius: 15px; /* Mantém a borda arredondada */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+    font-family: 'Cursive', sans-serif;
+    animation: pulse 2s infinite;
+    margin: 0 auto; /* Centraliza horizontalmente */
+    max-width: 90%; /* Limita a largura a 90% da tela */
+}
+
+.revelacao span {
+    font-size: 1.8em;
+    font-style: italic;
+    display: block;
+    margin-top: 10px;
+}
+
+/* Animação de pulsação */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* Balões animados */
+.balloon-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%; /* Ocupa toda a largura da tela */
+    height: 100%; /* Ocupa toda a altura da tela */
+    overflow: hidden;
+    z-index: -1;
+}
+
+.balloon {
+    position: absolute;
+    bottom: -100px;
+    width: 50px;
+    height: 70px;
+    background: #d8b4f8; /* Cor lilás */
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    animation: float 10s infinite ease-in-out;
+}
+
+.balloon::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    width: 2px;
+    height: 20px;
+    background: #d8b4f8;
+    transform: translateX(-50%);
+}
+
+/* Animação dos balões */
+@keyframes float {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(-300px) rotate(15deg);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-600px) rotate(-15deg);
+        opacity: 0;
+    }
 }
