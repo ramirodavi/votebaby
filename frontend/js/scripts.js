@@ -386,8 +386,49 @@ function updateUI(votes) {
     });
 }
 
+// Função de Scroll Automático
+function iniciarScrollAutomatico(velocidade, intervalo) {
+    let scrollPos = 0;
+    let alturaMaxima = () => document.documentElement.scrollHeight - window.innerHeight;
+    let rolandoParaBaixo = true;
+
+    function rolarPagina() {
+        let maxAltura = alturaMaxima();
+
+        if (rolandoParaBaixo) {
+            if (scrollPos < maxAltura) {
+                scrollPos += velocidade;
+                window.scrollTo(0, scrollPos);
+                setTimeout(rolarPagina, intervalo);
+            } else {
+                setTimeout(() => {
+                    rolandoParaBaixo = false;
+                    rolarPagina();
+                }, 3000); // Espera 3 segundos no final
+            }
+        } else {
+            if (scrollPos > 0) {
+                scrollPos -= velocidade;
+                window.scrollTo(0, scrollPos);
+                setTimeout(rolarPagina, intervalo);
+            } else {
+                setTimeout(() => {
+                    rolandoParaBaixo = true;
+                    rolarPagina();
+                }, 3000); // Espera 3 segundos no topo antes de recomeçar
+            }
+        }
+    }
+
+    rolarPagina();
+}
+
 // Inicializa o quadro de comentários
 document.getElementById('comment-form').addEventListener('submit', submitComment);
 
 // Inicializa a aplicação ao carregar a página
-window.onload = initializeApp;
+window.onload = () => {
+    initializeApp();
+    // Inicializa o scroll automático ao carregar a página
+    iniciarScrollAutomatico(1, 35);  // Valores padrões: 2 pixels por 30 ms
+};
