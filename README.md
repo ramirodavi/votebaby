@@ -85,11 +85,42 @@ Este projeto é uma aplicação interativa de votação para eventos de chá rev
    PG_PORT=sua_porta
    API_URL=https://backend-votebaby.onrender.com/votes
    PORT=3000
+
+   # Nomes dos bebês
+   BABY_BOY_NAME=João
+   BABY_GIRL_NAME=Maria
+
+   # Resultado do chá revelação (opções: "boy", "girl", "pending")
+   REVEAL_RESULT=pending
+
+   # Texto adicional para a revelação
+   REVEAL_TEXT=Bem vindo(a) ao mundo
+
+   # Cores para o sexo masculino
+   BOY_COLOR=rgb(58, 177, 98)
+   BG_BOY_COLOR=rgb(172, 241, 197)
+
+   # Cores para o sexo feminino
+   GIRL_COLOR=rgb(219, 130, 207)
+   BG_GIRL_COLOR=rgb(231, 179, 223)
+
+   # Cores dos balões
+   BALLOON_BOY_COLOR=rgb(58, 177, 98)
+   BALLOON_GIRL_COLOR=rgb(219, 130, 207)
+
+   # Cores do fundo da div de revelação
+   REVEAL_BG_BOY_COLOR=rgb(172, 241, 197)
+   REVEAL_BG_GIRL_COLOR=rgb(231, 179, 223)
+
+   # Ativar/desativar o scroll automático (opções: "true", "false")
+   ENABLE_AUTO_SCROLL=true
    ```
 
 5. Inicie o servidor:
    ```bash
-   node server.js
+   npm start
+   ou
+   nodemon server.js
    ```
 
 ---
@@ -113,7 +144,7 @@ Este projeto é uma aplicação interativa de votação para eventos de chá rev
 2. Configure o repositório GitHub e as variáveis de ambiente (`PG_USER`, `PG_HOST`, etc.).
 3. Configure os comandos:
    - **Build Command:** `npm install`
-   - **Start Command:** `node server.js`
+   - **Start Command:** `npm start ou nodemon server.js`
 4. O Render gerará uma URL pública para o backend.
 
 ### Frontend no GitHub Pages
