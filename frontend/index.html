@@ -3,41 +3,36 @@
 <head>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="./css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet"> <!-- Fonte amigável -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chá Revelação - Votação</title>
 </head>
 <body>
-    <div class="balloon-container">
-        <!-- Balões serão gerados aqui -->
-    </div>
-    <div id="revelacao" class="revelacao" style="background-color: pink; color: white; text-align: center; padding: 50px; font-size: 2em; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-        🎀 É uma menina! 🎀
-        <br>
-        <span style="font-size: 1.5em; font-style: italic;">Cecília vem ao mundo</span>
-    </div>
-    
+    <div class="balloon-container"></div>
+    <div id="revelacao" class="revelacao"></div>
 
-    <h1>Chá Revelação</h1>
-<!--    
-    <h2>Vote no sexo do bebê!</h2>
-    <div class="input-container">
-        <input type="text" id="name-input" placeholder="Digite seu nome antes de votar...">
+    <div class="vote-section">
+        <h1>Chá Revelação</h1>
+        <h2>Vote no sexo do bebê!</h2>
+        <div class="input-container">
+            <input type="text" id="name-input" placeholder="Digite seu nome antes de votar...">
+        </div>
+        <div class="buttons">
+            <button class="boy-btn" onclick="vote('boy')">Menino</button>
+            <button class="girl-btn" onclick="vote('girl')">Menina</button>
+        </div>
+        <div class="vote-count">
+            <div class="boy-name"><strong>Francisco:</strong> <span id="boy-count">0</span></div>
+            <div class="name-separator"><strong>|</strong></div>
+            <div class="girl-name"><strong>Cecília:</strong> <span id="girl-count">0</span></div>
+        </div>
+        <div class="progress-container">
+            <div id="boy-bar" class="progress-bar boy-bar">0%</div>
+            <div id="girl-bar" class="progress-bar girl-bar">0%</div>
+        </div>
     </div>
-    <div class="buttons">
-        <button class="boy-btn" onclick="vote('boy')">Menino</button>
-        <button class="girl-btn" onclick="vote('girl')">Menina</button>
-    </div>
--->    
-    <div class="vote-count">
-        <div class="boy-name"><strong>Francisco:</strong> <span id="boy-count">0</span></div>
-        <div class="name-separator"><strong>|</strong></div>
-        <div class="girl-name"><strong>Cecília:</strong> <span id="girl-count">0</span></div>
-    </div>
-    <div class="progress-container">
-        <div id="boy-bar" class="progress-bar boy-bar">0%</div>
-        <div id="girl-bar" class="progress-bar girl-bar">0%</div>
-    </div>
+
     <div class="log-container">
         <h3>Histórico de Votos</h3>
         <div class="vote-log" id="log"></div>
@@ -45,11 +40,9 @@
     <div class="comment-container">
         <h3>Comentários</h3>
         <form id="comment-form" class="comment-form">
-            <!--
             <input type="text" id="comment-name" placeholder="Seu nome" required>
             <textarea id="comment-message" placeholder="Digite seu comentário..." required></textarea>
             <button type="submit">Enviar</button>
-            -->
         </form>
         <div class="comment-log" id="comment-log"></div>
     </div>

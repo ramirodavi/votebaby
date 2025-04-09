@@ -3,23 +3,22 @@ let webSocketUrl;
 let configUrl;
 
 // Define as URLs de desenvolvimento e produção
-const productionUrl = 'https://backend-votebaby.onrender.com/config'; // URL do backend no Render
-const developmentUrl = 'http://localhost:3000/config'; // URL do backend local
+const productionUrl = 'https://backend-votebaby.onrender.com/config';
+const developmentUrl = 'http://localhost:3000/config';
 
-// Define as URLs de WebSocket para produção e desenvolvimento
-const productionWebSocket = 'wss://backend-votebaby.onrender.com'; // WebSocket em produção (Render)
-const developmentWebSocket = 'ws://localhost:3000'; // WebSocket em desenvolvimento (local)
+const productionWebSocket = 'wss://backend-votebaby.onrender.com';
+const developmentWebSocket = 'ws://localhost:3000';
 
-// Configuração dinâmica das URLs
+// Configuração dinâmica das URLs com base no ambiente
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    webSocketUrl = developmentWebSocket; // WebSocket local
-    configUrl = developmentUrl; // Configuração local
+    webSocketUrl = developmentWebSocket;
+    configUrl = developmentUrl;
 } else {
-    webSocketUrl = productionWebSocket; // WebSocket em produção
-    configUrl = productionUrl; // Configuração em produção
+    webSocketUrl = productionWebSocket;
+    configUrl = productionUrl;
 }
 
-// Adiciona o splash de carregamento na página
+// Exibe o splash de carregamento
 function showLoading() {
     const overlay = document.createElement('div');
     overlay.id = 'loading-overlay';
@@ -31,7 +30,7 @@ function showLoading() {
     document.body.appendChild(overlay);
 }
 
-// Remove o splash de carregamento da página
+// Remove o splash de carregamento
 function hideLoading() {
     const overlay = document.getElementById('loading-overlay');
     if (overlay) {
@@ -39,13 +38,9 @@ function hideLoading() {
     }
 }
 
-// Envolve uma função assíncrona com o splash e timeout
+// Envolve uma operação assíncrona com o splash de carregamento
 async function withLoading(operation) {
-    let loadingTimeout;
-
-    loadingTimeout = setTimeout(() => {
-        showLoading();
-    }, 3000); // Exibe o splash após 3 segundos
+    let loadingTimeout = setTimeout(() => showLoading(), 3000);
 
     try {
         await operation();
@@ -59,26 +54,111 @@ async function withLoading(operation) {
     }
 }
 
-// Gerar ou recuperar o browserId
+// Gera ou recupera o identificador único do navegador
 let browserId = localStorage.getItem('browserId');
 if (!browserId) {
-    browserId = crypto.randomUUID(); // Gera um identificador único
+    browserId = crypto.randomUUID();
     localStorage.setItem('browserId', browserId);
 }
 
-// Carrega a configuração inicial
+// Variáveis de configuração padrão
+let babyBoyName = 'Menino';
+let babyGirlName = 'Menina';
+let revealResult = 'pending';
+let revealText = '';
+
+let boyColor = 'rgb(58, 177, 98)';
+let bgBoyColor = 'rgb(172, 241, 197)';
+let girlColor = 'rgb(219, 130, 207)';
+let bgGirlColor = 'rgb(231, 179, 223)';
+
+let balloonBoyColor = 'rgb(58, 177, 98)';
+let balloonGirlColor = 'rgb(219, 130, 207)';
+let revealBgBoyColor = 'rgb(172, 241, 197)';
+let revealBgGirlColor = 'rgb(231, 179, 223)';
+
+// Atualiza a interface com base nas configurações carregadas
+function updateRevealUI() {
+    const revealDiv = document.getElementById('revelacao');
+    const voteSection = document.querySelector('.vote-section');
+    const commentSection = document.querySelector('.comment-container');
+    const commentForm = document.getElementById('comment-form');
+    const commentLog = document.getElementById('comment-log');
+    const balloonContainer = document.querySelector('.balloon-container');
+
+    // Define as cores dinamicamente no :root
+    document.documentElement.style.setProperty('--boy-color', boyColor);
+    document.documentElement.style.setProperty('--girl-color', girlColor);
+    document.documentElement.style.setProperty('--bg-boy-color', bgBoyColor);
+    document.documentElement.style.setProperty('--bg-girl-color', bgGirlColor);
+    document.documentElement.style.setProperty('--balloon-color', revealResult === 'girl' ? balloonGirlColor : balloonBoyColor);
+    document.documentElement.style.setProperty('--reveal-bg-color', revealResult === 'girl' ? revealBgGirlColor : revealBgBoyColor);
+
+    if (revealResult === 'pending') {
+        revealDiv.style.display = 'none';
+        voteSection.style.display = 'block';
+        commentSection.style.display = 'block';
+        commentForm.style.display = 'block';
+        commentLog.style.display = 'block';
+        balloonContainer.style.display = 'none';
+
+        // Mostra os itens da seção de votação
+        voteSection.querySelector('h2').style.display = 'block';
+        voteSection.querySelector('.input-container').style.display = 'block';
+        voteSection.querySelector('.buttons').style.display = 'flex';
+    } else {
+        revealDiv.style.display = 'block';
+        voteSection.style.display = 'block'; // Mantém a seção visível
+        commentSection.style.display = 'block';
+        commentForm.style.display = 'none';
+        commentLog.style.display = 'block';
+        balloonContainer.style.display = 'block';
+
+        // Oculta os itens especificados da seção de votação
+        voteSection.querySelector('h2').style.display = 'none';
+        voteSection.querySelector('.input-container').style.display = 'none';
+        voteSection.querySelector('.buttons').style.display = 'none';
+
+        const emoji = revealResult === 'girl' ? '🎀' : '🚗';
+        revealDiv.innerHTML = `
+            ${emoji} ${revealResult === 'girl' ? 'É uma menina!' : 'É um menino!'} ${emoji}
+            <br>
+            <span style="font-size: 1.5em; font-style: italic;">${revealText}</span>
+        `;
+        revealDiv.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--reveal-bg-color').trim();
+        revealDiv.style.color = 'white';
+        startBalloonAndConfettiAnimation();
+    }
+
+    document.querySelector('.boy-name strong').textContent = `${babyBoyName}:`;
+    document.querySelector('.girl-name strong').textContent = `${babyGirlName}:`;
+}
+
+// Função para carregar a configuração inicial do backend
 async function loadConfig() {
     await withLoading(async () => {
-        const response = await fetch(configUrl); // Usa configUrl para buscar a configuração do backend
+        const response = await fetch(configUrl);
 
         if (!response.ok) {
-            console.warn(`Falha ao carregar configuração. Status: ${response.status}`);
             throw new Error('Erro ao carregar configuração. Por favor, tente novamente mais tarde.');
         }
 
         const config = await response.json();
-        apiUrl = config.apiUrl; // Atribui a URL da API corretamente
-        console.log(`Configuração carregada com sucesso: ${apiUrl}`);
+        apiUrl = config.apiUrl;
+        babyBoyName = config.babyBoyName;
+        babyGirlName = config.babyGirlName;
+        revealResult = config.revealResult;
+        revealText = config.revealText;
+        boyColor = config.boyColor;
+        bgBoyColor = config.bgBoyColor;
+        girlColor = config.girlColor;
+        bgGirlColor = config.bgGirlColor;
+        balloonBoyColor = config.balloonBoyColor;
+        balloonGirlColor = config.balloonGirlColor;
+        revealBgBoyColor = config.revealBgBoyColor;
+        revealBgGirlColor = config.revealBgGirlColor;
+
+        updateRevealUI();
     });
 }
 
@@ -88,7 +168,7 @@ async function initializeApp() {
         await loadConfig();
         initializeWebSocket();
         await loadVotes();
-        await loadComments(); // Carrega os comentários
+        await loadComments();
     } catch (error) {
         console.error('Erro na inicialização da aplicação:', error.message);
         alert('Erro ao inicializar a aplicação. Verifique sua conexão.');
@@ -189,14 +269,12 @@ async function vote(gender) {
         alert('Por favor, digite seu nome antes de votar!');
         return;
     }
-    // Envolvendo a operação em withLoading
     await withLoading(async () => {
-        await submitVote(name, gender); // Executa o envio do voto
+        await submitVote(name, gender);
     });
 
     nameInput.value = '';
 
-    // Inicia animação de celebração
     triggerCelebration(gender);
 }
 
@@ -205,37 +283,32 @@ function triggerCelebration(gender) {
     confettiContainer.classList.add('confetti-container');
     document.body.appendChild(confettiContainer);
 
-    // Obtém as variáveis de cor do CSS
     const rootStyles = getComputedStyle(document.documentElement);
     const boyColor = rootStyles.getPropertyValue('--boy-color').trim();
     const girlyColor = rootStyles.getPropertyValue('--girl-color').trim();
 
-    // Escolhe a cor dos balões e confetes com base no gênero
     const color = gender === 'boy' ? boyColor : girlyColor;
 
-    // Animação de balões
     for (let i = 0; i < 10; i++) {
         const balloon = document.createElement('div');
         balloon.classList.add('balloon');
-        balloon.style.backgroundColor = color; // Aplica a cor dinâmica
+        balloon.style.backgroundColor = color;
         balloon.style.left = `${Math.random() * 100}%`;
         balloon.style.animationDelay = `${Math.random() * 0.5}s`;
 
         confettiContainer.appendChild(balloon);
     }
 
-    // Animação de confetes
     for (let i = 0; i < 50; i++) {
         const confetti = document.createElement('div');
         confetti.classList.add('confetti');
-        confetti.style.backgroundColor = Math.random() > 0.5 ? color : '#FFF'; // Mistura com branco
+        confetti.style.backgroundColor = Math.random() > 0.5 ? color : '#FFF';
         confetti.style.left = `${Math.random() * 100}%`;
         confetti.style.animationDelay = `${Math.random() * 0.3}s`;
 
         confettiContainer.appendChild(confetti);
     }
 
-    // Remove os elementos depois de 3 segundos
     setTimeout(() => {
         confettiContainer.remove();
     }, 3000);
@@ -266,7 +339,7 @@ async function deleteComment(id) {
             const response = await fetch(commentsEndpoint, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ browserId }) // Envia o browserId para validação
+                body: JSON.stringify({ browserId })
             });
 
             if (!response.ok) {
@@ -289,7 +362,6 @@ async function submitComment(event) {
         return;
     }
 
-    // Formata o nome: apenas dois primeiros nomes com a inicial maiúscula
     name = name.split(' ')
         .slice(0, 2)
         .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
@@ -302,7 +374,7 @@ async function submitComment(event) {
             body: JSON.stringify({
                 name,
                 message,
-                browserId // Inclui o browserId no envio
+                browserId
             })
         });
 
@@ -310,10 +382,10 @@ async function submitComment(event) {
             throw new Error('Erro ao enviar comentário. Por favor, tente novamente mais tarde.');
         }
 
-        await loadComments(); // Recarrega os comentários após o envio
+        await loadComments();
     });
 
-    document.getElementById('comment-form').reset(); // Limpa o formulário após o envio
+    document.getElementById('comment-form').reset();
 }
 
 // Atualiza os comentários na interface
@@ -336,7 +408,6 @@ function updateCommentUI(comments) {
         timestampSpan.textContent = new Date(comment.created_at).toLocaleString();
         timestampSpan.classList.add('timestamp');
 
-        // Permitir exclusão ao clicar no comentário
         entry.onclick = () => deleteComment(comment.id);
 
         entry.appendChild(authorSpan);
@@ -404,7 +475,7 @@ function iniciarScrollAutomatico(velocidade, intervalo) {
                 setTimeout(() => {
                     rolandoParaBaixo = false;
                     rolarPagina();
-                }, 3000); // Espera 3 segundos no final
+                }, 3000);
             }
         } else {
             if (scrollPos > 0) {
@@ -415,7 +486,7 @@ function iniciarScrollAutomatico(velocidade, intervalo) {
                 setTimeout(() => {
                     rolandoParaBaixo = true;
                     rolarPagina();
-                }, 3000); // Espera 3 segundos no topo antes de recomeçar
+                }, 3000);
             }
         }
     }
@@ -429,20 +500,17 @@ document.getElementById('comment-form').addEventListener('submit', submitComment
 // Inicializa a aplicação ao carregar a página
 window.onload = () => {
     initializeApp();
-    // Inicializa o scroll automático ao carregar a página
-    // iniciarScrollAutomatico(1, 35);  // Valores padrões: 2 pixels por 30 ms
 
     const div = document.getElementById('revelacao');
-    div.style.opacity = 0; // Começa invisível
+    div.style.opacity = 0;
     let opacity = 0;
 
-    // Animação para aparecer suavemente
     const fadeIn = setInterval(() => {
-        opacity += 0.02; // Incrementa a opacidade
+        opacity += 0.02;
         div.style.opacity = opacity;
 
-        if (opacity >= 1) clearInterval(fadeIn); // Para a animação quando visível
-    }, 30);    
+        if (opacity >= 1) clearInterval(fadeIn);
+    }, 30);
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -453,9 +521,9 @@ document.addEventListener("DOMContentLoaded", () => {
         balloon.classList.add("balloon");
         balloon.style.left = Math.random() * 100 + "vw";
         balloon.style.animationDuration = Math.random() * 5 + 5 + "s";
+        balloon.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--balloon-color').trim();
         balloonContainer.appendChild(balloon);
 
-        // Remover balão após a animação
         balloon.addEventListener("animationend", () => {
             balloon.remove();
         });
@@ -466,18 +534,57 @@ document.addEventListener("DOMContentLoaded", () => {
         confetti.classList.add("confetti");
         confetti.style.left = Math.random() * 100 + "vw";
         confetti.style.animationDuration = Math.random() * 3 + 2 + "s";
-        confetti.style.backgroundColor = Math.random() > 0.5 ? "#d8b4f8" : "#c4b5fd"; // Alterna entre tons de lilás
+        confetti.style.backgroundColor = "white";
         balloonContainer.appendChild(confetti);
 
-        // Remover confete após a animação
         confetti.addEventListener("animationend", () => {
             confetti.remove();
         });
     }
 
-    // Gerar balões e confetes a cada 500ms
+    if (revealResult !== 'pending') {
+        setInterval(() => {
+            createBalloon();
+            createConfetti();
+        }, 500);
+    }
+});
+
+// Inicia a animação de balões e confetes
+function startBalloonAndConfettiAnimation() {
+    const balloonContainer = document.querySelector(".balloon-container");
+
+    function createBalloon() {
+        const balloon = document.createElement("div");
+        balloon.classList.add("balloon");
+        balloon.style.left = Math.random() * 100 + "vw";
+        balloon.style.animationDuration = Math.random() * 5 + 5 + "s";
+        balloon.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--balloon-color').trim();
+        balloonContainer.appendChild(balloon);
+
+        // Remove o balão após a animação
+        balloon.addEventListener("animationend", () => {
+            balloon.remove();
+        });
+    }
+
+    function createConfetti() {
+        const confetti = document.createElement("div");
+        confetti.classList.add("confetti");
+        confetti.style.left = Math.random() * 100 + "vw";
+        confetti.style.animationDuration = Math.random() * 3 + 2 + "s";
+        confetti.style.backgroundColor = "white"; // Cor fixa para confetes
+        balloonContainer.appendChild(confetti);
+
+        // Remove o confete após a animação
+        confetti.addEventListener("animationend", () => {
+            confetti.remove();
+        });
+    }
+
+    // Gera balões e confetes em intervalos regulares
     setInterval(() => {
         createBalloon();
         createConfetti();
     }, 500);
-});
+}
