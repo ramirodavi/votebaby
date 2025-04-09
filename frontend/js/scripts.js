@@ -69,7 +69,7 @@ if (!browserId) {
 // Carrega a configuração inicial
 async function loadConfig() {
     await withLoading(async () => {
-        const response = await fetch(configUrl);
+        const response = await fetch(configUrl); // Usa configUrl para buscar a configuração do backend
 
         if (!response.ok) {
             console.warn(`Falha ao carregar configuração. Status: ${response.status}`);
@@ -77,7 +77,7 @@ async function loadConfig() {
         }
 
         const config = await response.json();
-        apiUrl = config.apiUrl; // Atribui a URL da API
+        apiUrl = config.apiUrl; // Atribui a URL da API corretamente
         console.log(`Configuração carregada com sucesso: ${apiUrl}`);
     });
 }
