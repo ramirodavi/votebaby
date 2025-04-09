@@ -16,7 +16,8 @@ router.get('/', (req, res) => {
         balloonBoyColor: process.env.BALLOON_BOY_COLOR || 'rgb(58, 177, 98)',
         balloonGirlColor: process.env.BALLOON_GIRL_COLOR || 'rgb(219, 130, 207)',
         revealBgBoyColor: process.env.REVEAL_BG_BOY_COLOR || 'rgb(172, 241, 197)',
-        revealBgGirlColor: process.env.REVEAL_BG_GIRL_COLOR || 'rgb(231, 179, 223)'
+        revealBgGirlColor: process.env.REVEAL_BG_GIRL_COLOR || 'rgb(231, 179, 223)',
+        enableAutoScroll: process.env.ENABLE_AUTO_SCROLL === 'true'
     });
 });
 

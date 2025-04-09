@@ -40,6 +40,10 @@ function hideLoading() {
 
 // Envolve uma operação assíncrona com o splash de carregamento
 async function withLoading(operation) {
+    if (typeof operation !== 'function') {
+        console.warn('Nenhuma operação válida foi passada para withLoading.');
+        return;
+    }
     let loadingTimeout = setTimeout(() => showLoading(), 3000);
 
     try {
@@ -76,6 +80,8 @@ let balloonBoyColor = 'rgb(58, 177, 98)';
 let balloonGirlColor = 'rgb(219, 130, 207)';
 let revealBgBoyColor = 'rgb(172, 241, 197)';
 let revealBgGirlColor = 'rgb(231, 179, 223)';
+
+let enableAutoScroll = false;
 
 // Atualiza a interface com base nas configurações carregadas
 function updateRevealUI() {
@@ -144,10 +150,12 @@ async function loadConfig() {
         }
 
         const config = await response.json();
+
         apiUrl = config.apiUrl;
         babyBoyName = config.babyBoyName;
         babyGirlName = config.babyGirlName;
         revealResult = config.revealResult;
+        enableAutoScroll = config.enableAutoScroll;
         revealText = config.revealText;
         boyColor = config.boyColor;
         bgBoyColor = config.bgBoyColor;
@@ -162,6 +170,43 @@ async function loadConfig() {
     });
 }
 
+// Função de Scroll Automático
+function startAutoScroll(speed, interval) {
+    let scrollPosition = 0;
+    const maxScrollHeight = () => document.documentElement.scrollHeight - window.innerHeight;
+    let scrollingDown = true;
+
+    function scrollPage() {
+        const maxHeight = maxScrollHeight();
+
+        if (scrollingDown) {
+            if (scrollPosition < maxHeight) {
+                scrollPosition += speed;
+                window.scrollTo(0, scrollPosition);
+                setTimeout(scrollPage, interval);
+            } else {
+                setTimeout(() => {
+                    scrollingDown = false;
+                    scrollPage();
+                }, 3000);
+            }
+        } else {
+            if (scrollPosition > 0) {
+                scrollPosition -= speed;
+                window.scrollTo(0, scrollPosition);
+                setTimeout(scrollPage, interval);
+            } else {
+                setTimeout(() => {
+                    scrollingDown = true;
+                    scrollPage();
+                }, 3000);
+            }
+        }
+    }
+
+    scrollPage();
+}
+
 // Inicializa a aplicação
 async function initializeApp() {
     try {
@@ -169,6 +214,10 @@ async function initializeApp() {
         initializeWebSocket();
         await loadVotes();
         await loadComments();
+
+        if (revealResult !== 'pending' && enableAutoScroll) {
+            startAutoScroll(2, 50); // Velocidade e intervalo padrão
+        }
     } catch (error) {
         console.error('Erro na inicialização da aplicação:', error.message);
         alert('Erro ao inicializar a aplicação. Verifique sua conexão.');
@@ -457,43 +506,6 @@ function updateUI(votes) {
     });
 }
 
-// Função de Scroll Automático
-function iniciarScrollAutomatico(velocidade, intervalo) {
-    let scrollPos = 0;
-    let alturaMaxima = () => document.documentElement.scrollHeight - window.innerHeight;
-    let rolandoParaBaixo = true;
-
-    function rolarPagina() {
-        let maxAltura = alturaMaxima();
-
-        if (rolandoParaBaixo) {
-            if (scrollPos < maxAltura) {
-                scrollPos += velocidade;
-                window.scrollTo(0, scrollPos);
-                setTimeout(rolarPagina, intervalo);
-            } else {
-                setTimeout(() => {
-                    rolandoParaBaixo = false;
-                    rolarPagina();
-                }, 3000);
-            }
-        } else {
-            if (scrollPos > 0) {
-                scrollPos -= velocidade;
-                window.scrollTo(0, scrollPos);
-                setTimeout(rolarPagina, intervalo);
-            } else {
-                setTimeout(() => {
-                    rolandoParaBaixo = true;
-                    rolarPagina();
-                }, 3000);
-            }
-        }
-    }
-
-    rolarPagina();
-}
-
 // Inicializa o quadro de comentários
 document.getElementById('comment-form').addEventListener('submit', submitComment);
 
@@ -554,7 +566,16 @@ document.addEventListener("DOMContentLoaded", () => {
 function startBalloonAndConfettiAnimation() {
     const balloonContainer = document.querySelector(".balloon-container");
 
+    // Define o número máximo de balões visíveis
+    const MAX_BALLOONS = 50;
+
+    // Função para criar balões e confetes com limite
     function createBalloon() {
+        // Remove balões antigos se o limite for atingido
+        if (balloonContainer.children.length >= MAX_BALLOONS) {
+            balloonContainer.removeChild(balloonContainer.firstChild);
+        }
+
         const balloon = document.createElement("div");
         balloon.classList.add("balloon");
         balloon.style.left = Math.random() * 100 + "vw";
@@ -569,6 +590,11 @@ function startBalloonAndConfettiAnimation() {
     }
 
     function createConfetti() {
+        // Remove confetes antigos se o limite for atingido
+        if (balloonContainer.children.length >= MAX_BALLOONS) {
+            balloonContainer.removeChild(balloonContainer.firstChild);
+        }
+
         const confetti = document.createElement("div");
         confetti.classList.add("confetti");
         confetti.style.left = Math.random() * 100 + "vw";
