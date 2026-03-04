@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { formatName } = require('../utils/helpers');
 
 async function getComments(req, res) {
     try {
@@ -19,7 +20,10 @@ async function addComment(req, res) {
     const formattedName = formatName(name);
 
     try {
-        await pool.query('INSERT INTO comments (name, message, browser_id) VALUES ($1, $2, $3)', [formattedName, message, browserId]);
+        await pool.query(
+            'INSERT INTO comments (name, message, browser_id) VALUES ($1, $2, $3)',
+            [formattedName, message, browserId]
+        );
         res.status(201).json({ message: 'Comentário adicionado com sucesso!' });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao adicionar comentário.' });
@@ -28,10 +32,17 @@ async function addComment(req, res) {
 
 async function deleteComment(req, res) {
     const { id } = req.params;
-    const { browserId } = req.body;
+    const { browserId } = req.query;
+
+    if (!browserId) {
+        return res.status(400).json({ error: 'Identificador do navegador é obrigatório.' });
+    }
 
     try {
-        const result = await pool.query('SELECT * FROM comments WHERE id = $1 AND browser_id = $2', [id, browserId]);
+        const result = await pool.query(
+            'SELECT * FROM comments WHERE id = $1 AND browser_id = $2',
+            [id, browserId]
+        );
 
         if (result.rows.length === 0) {
             return res.status(403).json({ error: 'Você não tem permissão para excluir este comentário.' });
@@ -42,13 +53,6 @@ async function deleteComment(req, res) {
     } catch (err) {
         res.status(500).json({ error: 'Erro ao excluir comentário.' });
     }
-}
-
-function formatName(name) {
-    return name.trim().split(' ')
-        .slice(0, 2)
-        .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
-        .join(' ');
 }
 
 module.exports = { getComments, addComment, deleteComment };

@@ -2,14 +2,12 @@ let apiUrl;
 let webSocketUrl;
 let configUrl;
 
-// Define as URLs de desenvolvimento e produção
 const productionUrl = 'https://backend-votebaby.onrender.com/config';
 const developmentUrl = 'http://localhost:3000/config';
 
 const productionWebSocket = 'wss://backend-votebaby.onrender.com';
 const developmentWebSocket = 'ws://localhost:3000';
 
-// Configuração dinâmica das URLs com base no ambiente
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     webSocketUrl = developmentWebSocket;
     configUrl = developmentUrl;
@@ -18,7 +16,15 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
     configUrl = productionUrl;
 }
 
-// Exibe o splash de carregamento
+// ─── Utilitários ─────────────────────────────────────────────────────────────
+
+function formatName(name) {
+    return name.trim().split(' ')
+        .slice(0, 2)
+        .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
+        .join(' ');
+}
+
 function showLoading() {
     const overlay = document.createElement('div');
     overlay.id = 'loading-overlay';
@@ -30,22 +36,17 @@ function showLoading() {
     document.body.appendChild(overlay);
 }
 
-// Remove o splash de carregamento
 function hideLoading() {
     const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        overlay.remove();
-    }
+    if (overlay) overlay.remove();
 }
 
-// Envolve uma operação assíncrona com o splash de carregamento
 async function withLoading(operation) {
     if (typeof operation !== 'function') {
         console.warn('Nenhuma operação válida foi passada para withLoading.');
         return;
     }
-    let loadingTimeout = setTimeout(() => showLoading(), 3000);
-
+    const loadingTimeout = setTimeout(() => showLoading(), 3000);
     try {
         await operation();
     } catch (err) {
@@ -58,14 +59,16 @@ async function withLoading(operation) {
     }
 }
 
-// Gera ou recupera o identificador único do navegador
+// ─── Identificador do navegador ───────────────────────────────────────────────
+
 let browserId = localStorage.getItem('browserId');
 if (!browserId) {
     browserId = crypto.randomUUID();
     localStorage.setItem('browserId', browserId);
 }
 
-// Variáveis de configuração padrão
+// ─── Configurações padrão ─────────────────────────────────────────────────────
+
 let babyBoyName = 'Menino';
 let babyGirlName = 'Menina';
 let revealResult = 'pending';
@@ -83,7 +86,8 @@ let revealBgGirlColor = 'rgb(231, 179, 223)';
 
 let enableAutoScroll = false;
 
-// Atualiza a interface com base nas configurações carregadas
+// ─── UI ───────────────────────────────────────────────────────────────────────
+
 function updateRevealUI() {
     const revealDiv = document.getElementById('revelacao');
     const voteSection = document.querySelector('.vote-section');
@@ -92,7 +96,6 @@ function updateRevealUI() {
     const commentLog = document.getElementById('comment-log');
     const balloonContainer = document.querySelector('.balloon-container');
 
-    // Define as cores dinamicamente no :root
     document.documentElement.style.setProperty('--boy-color', boyColor);
     document.documentElement.style.setProperty('--girl-color', girlColor);
     document.documentElement.style.setProperty('--bg-boy-color', bgBoyColor);
@@ -108,19 +111,17 @@ function updateRevealUI() {
         commentLog.style.display = 'block';
         balloonContainer.style.display = 'none';
 
-        // Mostra os itens da seção de votação
         voteSection.querySelector('h2').style.display = 'block';
         voteSection.querySelector('.input-container').style.display = 'block';
         voteSection.querySelector('.buttons').style.display = 'flex';
     } else {
         revealDiv.style.display = 'block';
-        voteSection.style.display = 'block'; // Mantém a seção visível
+        voteSection.style.display = 'block';
         commentSection.style.display = 'block';
         commentForm.style.display = 'none';
         commentLog.style.display = 'block';
         balloonContainer.style.display = 'block';
 
-        // Oculta os itens especificados da seção de votação
         voteSection.querySelector('h2').style.display = 'none';
         voteSection.querySelector('.input-container').style.display = 'none';
         voteSection.querySelector('.buttons').style.display = 'none';
@@ -140,7 +141,81 @@ function updateRevealUI() {
     document.querySelector('.girl-name strong').textContent = `${babyGirlName}:`;
 }
 
-// Função para carregar a configuração inicial do backend
+function updateUI(votes) {
+    const boyVotes = votes.filter(v => v.gender === 'boy').length;
+    const girlVotes = votes.filter(v => v.gender === 'girl').length;
+    const total = boyVotes + girlVotes;
+
+    const boyPct = total ? Math.round(boyVotes / total * 100) : 0;
+    const girlPct = total ? Math.round(girlVotes / total * 100) : 0;
+
+    const boyBar = document.getElementById('boy-bar');
+    const girlBar = document.getElementById('girl-bar');
+
+    boyBar.style.width = `${boyPct}%`;
+    boyBar.textContent = `${boyPct}%`;
+    girlBar.style.width = `${girlPct}%`;
+    girlBar.textContent = `${girlPct}%`;
+
+    document.getElementById('boy-count').textContent = boyVotes;
+    document.getElementById('girl-count').textContent = girlVotes;
+
+    const log = document.getElementById('log');
+    log.innerHTML = '';
+
+    votes.forEach(vote => {
+        const entry = document.createElement('div');
+        entry.classList.add('vote-entry');
+        entry.onclick = () => deleteVote(vote.id);
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = vote.name;
+        nameSpan.classList.add('bold');
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent = ' votou em ';
+
+        const genderSpan = document.createElement('span');
+        genderSpan.textContent = vote.gender === 'boy' ? 'Menino' : 'Menina';
+        genderSpan.classList.add('bold', vote.gender === 'boy' ? 'boy-text' : 'girl-text');
+
+        entry.appendChild(nameSpan);
+        entry.appendChild(textSpan);
+        entry.appendChild(genderSpan);
+        log.appendChild(entry);
+    });
+}
+
+function updateCommentUI(comments) {
+    const commentLog = document.getElementById('comment-log');
+    commentLog.innerHTML = '';
+
+    comments.forEach(comment => {
+        const entry = document.createElement('div');
+        entry.classList.add('comment-entry');
+        entry.onclick = () => deleteComment(comment.id);
+
+        const authorSpan = document.createElement('span');
+        authorSpan.textContent = comment.name;
+        authorSpan.classList.add('author');
+
+        const messageP = document.createElement('p');
+        messageP.textContent = comment.message;
+
+        const timestampSpan = document.createElement('span');
+        timestampSpan.textContent = new Date(comment.created_at).toLocaleString();
+        timestampSpan.classList.add('timestamp');
+
+        entry.appendChild(authorSpan);
+        entry.appendChild(messageP);
+        entry.appendChild(timestampSpan);
+
+        commentLog.appendChild(entry);
+    });
+}
+
+// ─── Config ───────────────────────────────────────────────────────────────────
+
 async function loadConfig() {
     await withLoading(async () => {
         const response = await fetch(configUrl);
@@ -170,7 +245,203 @@ async function loadConfig() {
     });
 }
 
-// Função de Scroll Automático
+// ─── WebSocket ────────────────────────────────────────────────────────────────
+
+function initializeWebSocket() {
+    let reconnectDelay = 1000;
+    let socket;
+
+    function connect() {
+        socket = new WebSocket(webSocketUrl);
+
+        socket.onopen = () => {
+            console.log('Conexão com WebSocket estabelecida:', webSocketUrl);
+            reconnectDelay = 1000;
+        };
+
+        socket.onmessage = async (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('Mensagem recebida via WebSocket:', data);
+                await loadVotes();
+            } catch (err) {
+                console.error('Erro ao processar mensagem do WebSocket:', err.message);
+            }
+        };
+
+        socket.onerror = (error) => {
+            console.error('Erro no WebSocket:', error);
+        };
+
+        socket.onclose = () => {
+            console.warn(`Conexão com WebSocket encerrada. Reconectando em ${reconnectDelay / 1000}s...`);
+            setTimeout(() => {
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+                connect();
+            }, reconnectDelay);
+        };
+    }
+
+    connect();
+}
+
+// ─── Votos ────────────────────────────────────────────────────────────────────
+
+async function loadVotes() {
+    await withLoading(async () => {
+        const response = await fetch(`${apiUrl}/votes`);
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar votos. Por favor, tente novamente mais tarde.');
+        }
+
+        const votes = await response.json();
+        updateUI(votes);
+    });
+}
+
+async function submitVote(name, gender) {
+    const formattedName = formatName(name);
+
+    await withLoading(async () => {
+        const response = await fetch(`${apiUrl}/votes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: formattedName, gender, browserId })
+        });
+
+        if (!response.ok) {
+            const errorMessage = await response.text();
+            console.error('Erro ao registrar voto:', errorMessage);
+            throw new Error('Erro ao registrar voto. Por favor, tente novamente.');
+        }
+    });
+}
+
+async function deleteVote(id) {
+    if (!confirm('Você realmente deseja excluir este voto?')) return;
+
+    await withLoading(async () => {
+        const response = await fetch(`${apiUrl}/votes/${id}?browserId=${browserId}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            const errorMessage = await response.text();
+            console.error('Erro ao excluir voto:', errorMessage);
+            throw new Error('Você não tem permissão para excluir este voto.');
+        }
+    });
+}
+
+async function vote(gender) {
+    const nameInput = document.getElementById('name-input');
+    const name = nameInput.value.trim();
+
+    if (!name) {
+        alert('Por favor, digite seu nome antes de votar!');
+        return;
+    }
+
+    await submitVote(name, gender);
+    nameInput.value = '';
+    triggerCelebration(gender);
+}
+
+function triggerCelebration(gender) {
+    const confettiContainer = document.createElement('div');
+    confettiContainer.classList.add('confetti-container');
+    document.body.appendChild(confettiContainer);
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const color = gender === 'boy'
+        ? rootStyles.getPropertyValue('--boy-color').trim()
+        : rootStyles.getPropertyValue('--girl-color').trim();
+
+    for (let i = 0; i < 10; i++) {
+        const balloon = document.createElement('div');
+        balloon.classList.add('balloon');
+        balloon.style.backgroundColor = color;
+        balloon.style.left = `${Math.random() * 100}%`;
+        balloon.style.animationDelay = `${Math.random() * 0.5}s`;
+        confettiContainer.appendChild(balloon);
+    }
+
+    for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.classList.add('confetti');
+        confetti.style.backgroundColor = Math.random() > 0.5 ? color : '#FFF';
+        confetti.style.left = `${Math.random() * 100}%`;
+        confetti.style.animationDelay = `${Math.random() * 0.3}s`;
+        confettiContainer.appendChild(confetti);
+    }
+
+    setTimeout(() => confettiContainer.remove(), 3000);
+}
+
+// ─── Comentários ──────────────────────────────────────────────────────────────
+
+async function loadComments() {
+    await withLoading(async () => {
+        const response = await fetch(`${apiUrl}/comments`);
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar comentários. Por favor, tente novamente mais tarde.');
+        }
+
+        const comments = await response.json();
+        updateCommentUI(comments);
+    });
+}
+
+async function deleteComment(id) {
+    if (!confirm('Você realmente deseja excluir este comentário?')) return;
+
+    await withLoading(async () => {
+        const response = await fetch(`${apiUrl}/comments/${id}?browserId=${browserId}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            throw new Error('Você não tem permissão para excluir este comentário.');
+        }
+
+        await loadComments();
+    });
+}
+
+async function submitComment(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('comment-name').value.trim();
+    const message = document.getElementById('comment-message').value.trim();
+
+    if (!name || !message) {
+        alert('Por favor, preencha todos os campos.');
+        return;
+    }
+
+    const formattedName = formatName(name);
+
+    await withLoading(async () => {
+        const response = await fetch(`${apiUrl}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: formattedName, message, browserId })
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao enviar comentário. Por favor, tente novamente mais tarde.');
+        }
+
+        await loadComments();
+    });
+
+    document.getElementById('comment-form').reset();
+}
+
+// ─── Scroll automático ────────────────────────────────────────────────────────
+
 function startAutoScroll(speed, interval) {
     let scrollPosition = 0;
     const maxScrollHeight = () => document.documentElement.scrollHeight - window.innerHeight;
@@ -207,7 +478,50 @@ function startAutoScroll(speed, interval) {
     scrollPage();
 }
 
-// Inicializa a aplicação
+// ─── Animação de balões e confetes ────────────────────────────────────────────
+
+function startBalloonAndConfettiAnimation() {
+    const balloonContainer = document.querySelector('.balloon-container');
+    const MAX_BALLOONS = 50;
+
+    function createBalloon() {
+        if (balloonContainer.children.length >= MAX_BALLOONS) {
+            balloonContainer.removeChild(balloonContainer.firstChild);
+        }
+
+        const balloon = document.createElement('div');
+        balloon.classList.add('balloon');
+        balloon.style.left = Math.random() * 100 + 'vw';
+        balloon.style.animationDuration = Math.random() * 5 + 5 + 's';
+        balloon.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--balloon-color').trim();
+        balloonContainer.appendChild(balloon);
+
+        balloon.addEventListener('animationend', () => balloon.remove());
+    }
+
+    function createConfetti() {
+        if (balloonContainer.children.length >= MAX_BALLOONS) {
+            balloonContainer.removeChild(balloonContainer.firstChild);
+        }
+
+        const confetti = document.createElement('div');
+        confetti.classList.add('confetti');
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.animationDuration = Math.random() * 3 + 2 + 's';
+        confetti.style.backgroundColor = 'white';
+        balloonContainer.appendChild(confetti);
+
+        confetti.addEventListener('animationend', () => confetti.remove());
+    }
+
+    setInterval(() => {
+        createBalloon();
+        createConfetti();
+    }, 500);
+}
+
+// ─── Inicialização ────────────────────────────────────────────────────────────
+
 async function initializeApp() {
     try {
         await loadConfig();
@@ -216,7 +530,7 @@ async function initializeApp() {
         await loadComments();
 
         if (revealResult !== 'pending' && enableAutoScroll) {
-            startAutoScroll(2, 50); // Velocidade e intervalo padrão
+            startAutoScroll(2, 50);
         }
     } catch (error) {
         console.error('Erro na inicialização da aplicação:', error.message);
@@ -224,292 +538,8 @@ async function initializeApp() {
     }
 }
 
-// Inicializa o WebSocket
-function initializeWebSocket() {
-    const socket = new WebSocket(webSocketUrl);
-
-    socket.onopen = () => {
-        console.log('Conexão com WebSocket estabelecida:', webSocketUrl);
-    };
-
-    socket.onmessage = async (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            console.log('Mensagem recebida via WebSocket:', data);
-            await loadVotes();
-        } catch (err) {
-            console.error('Erro ao processar mensagem do WebSocket:', err.message);
-        }
-    };
-
-    socket.onerror = (error) => {
-        console.error('Erro no WebSocket:', error);
-    };
-
-    socket.onclose = () => {
-        console.warn('Conexão com WebSocket encerrada');
-    };
-}
-
-// Carrega os votos
-async function loadVotes() {
-    await withLoading(async () => {
-        const response = await fetch(`${apiUrl}/votes`);
-
-        if (!response.ok) {
-            throw new Error('Erro ao carregar votos. Por favor, tente novamente mais tarde.');
-        }
-
-        const votes = await response.json();
-        updateUI(votes);
-    });
-}
-
-// Submete um voto
-async function submitVote(name, gender) {
-    const formattedName = name.trim().split(' ')
-        .slice(0, 2)
-        .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
-        .join(' ');
-
-    await withLoading(async () => {
-        const response = await fetch(`${apiUrl}/votes`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: formattedName, gender, browserId })
-        });
-
-        if (!response.ok) {
-            const errorMessage = await response.text();
-            console.error('Erro ao registrar voto:', errorMessage);
-            throw new Error('Erro ao registrar voto. Por favor, tente novamente.');
-        }
-
-        await loadVotes();
-    });
-}
-
-// Exclui um voto
-async function deleteVote(id) {
-    if (confirm('Você realmente deseja excluir este voto?')) {
-        await withLoading(async () => {
-            const response = await fetch(`${apiUrl}/votes/${id}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ browserId })
-            });
-
-            if (!response.ok) {
-                const errorMessage = await response.text();
-                console.error('Erro ao excluir voto:', errorMessage);
-                throw new Error('Você não tem permissão para excluir este voto.');
-            }
-
-            await loadVotes();
-        });
-    }
-}
-
-async function vote(gender) {
-    const nameInput = document.getElementById('name-input');
-    const name = nameInput.value.trim();
-
-    if (!name) {
-        alert('Por favor, digite seu nome antes de votar!');
-        return;
-    }
-    await withLoading(async () => {
-        await submitVote(name, gender);
-    });
-
-    nameInput.value = '';
-
-    triggerCelebration(gender);
-}
-
-function triggerCelebration(gender) {
-    const confettiContainer = document.createElement('div');
-    confettiContainer.classList.add('confetti-container');
-    document.body.appendChild(confettiContainer);
-
-    const rootStyles = getComputedStyle(document.documentElement);
-    const boyColor = rootStyles.getPropertyValue('--boy-color').trim();
-    const girlyColor = rootStyles.getPropertyValue('--girl-color').trim();
-
-    const color = gender === 'boy' ? boyColor : girlyColor;
-
-    for (let i = 0; i < 10; i++) {
-        const balloon = document.createElement('div');
-        balloon.classList.add('balloon');
-        balloon.style.backgroundColor = color;
-        balloon.style.left = `${Math.random() * 100}%`;
-        balloon.style.animationDelay = `${Math.random() * 0.5}s`;
-
-        confettiContainer.appendChild(balloon);
-    }
-
-    for (let i = 0; i < 50; i++) {
-        const confetti = document.createElement('div');
-        confetti.classList.add('confetti');
-        confetti.style.backgroundColor = Math.random() > 0.5 ? color : '#FFF';
-        confetti.style.left = `${Math.random() * 100}%`;
-        confetti.style.animationDelay = `${Math.random() * 0.3}s`;
-
-        confettiContainer.appendChild(confetti);
-    }
-
-    setTimeout(() => {
-        confettiContainer.remove();
-    }, 3000);
-}
-
-// Carrega os comentários
-async function loadComments() {
-    await withLoading(async () => {
-        const response = await fetch(`${apiUrl}/comments`);
-
-        if (!response.ok) {
-            throw new Error('Erro ao carregar comentários. Por favor, tente novamente mais tarde.');
-        }
-
-        const comments = await response.json();
-        updateCommentUI(comments);
-    });
-}
-
-// Exclui um comentário
-async function deleteComment(id) {
-    const confirmation = confirm('Você realmente deseja excluir este comentário?');
-
-    if (confirmation) {
-        const commentsEndpoint = `${apiUrl}/comments/${id}`;
-
-        await withLoading(async () => {
-            const response = await fetch(commentsEndpoint, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ browserId })
-            });
-
-            if (!response.ok) {
-                throw new Error('Você não tem permissão para excluir este comentário.');
-            }
-
-            await loadComments();
-        });
-    }
-}
-
-async function submitComment(event) {
-    event.preventDefault();
-
-    let name = document.getElementById('comment-name').value.trim();
-    const message = document.getElementById('comment-message').value.trim();
-
-    if (!name || !message) {
-        alert('Por favor, preencha todos os campos.');
-        return;
-    }
-
-    name = name.split(' ')
-        .slice(0, 2)
-        .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
-        .join(' ');
-
-    await withLoading(async () => {
-        const response = await fetch(`${apiUrl}/comments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name,
-                message,
-                browserId
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Erro ao enviar comentário. Por favor, tente novamente mais tarde.');
-        }
-
-        await loadComments();
-    });
-
-    document.getElementById('comment-form').reset();
-}
-
-// Atualiza os comentários na interface
-function updateCommentUI(comments) {
-    const commentLog = document.getElementById('comment-log');
-    commentLog.innerHTML = '';
-
-    comments.forEach(comment => {
-        const entry = document.createElement('div');
-        entry.classList.add('comment-entry');
-
-        const authorSpan = document.createElement('span');
-        authorSpan.textContent = comment.name;
-        authorSpan.classList.add('author');
-
-        const messageP = document.createElement('p');
-        messageP.textContent = comment.message;
-
-        const timestampSpan = document.createElement('span');
-        timestampSpan.textContent = new Date(comment.created_at).toLocaleString();
-        timestampSpan.classList.add('timestamp');
-
-        entry.onclick = () => deleteComment(comment.id);
-
-        entry.appendChild(authorSpan);
-        entry.appendChild(messageP);
-        entry.appendChild(timestampSpan);
-
-        commentLog.appendChild(entry);
-    });
-}
-
-// Atualiza UI dos votos
-function updateUI(votes) {
-    const boyVotes = votes.filter(v => v.gender === 'boy').length;
-    const girlVotes = votes.filter(v => v.gender === 'girl').length;
-
-    document.getElementById('boy-bar').style.width = `${(boyVotes / (boyVotes + girlVotes)) * 100 || 0}%`;
-    document.getElementById('girl-bar').style.width = `${(girlVotes / (boyVotes + girlVotes)) * 100 || 0}%`;
-
-    document.getElementById('boy-bar').textContent = `${Math.round((boyVotes / (boyVotes + girlVotes)) * 100) || 0}%`;
-    document.getElementById('girl-bar').textContent = `${Math.round((girlVotes / (boyVotes + girlVotes)) * 100) || 0}%`;
-
-    document.getElementById('boy-count').textContent = boyVotes;
-    document.getElementById('girl-count').textContent = girlVotes;
-
-    const log = document.getElementById('log');
-    log.innerHTML = '';
-    votes.forEach(vote => {
-        const entry = document.createElement('div');
-        entry.classList.add('vote-entry');
-        entry.onclick = () => deleteVote(vote.id);
-
-        const nameSpan = document.createElement('span');
-        nameSpan.textContent = vote.name;
-        nameSpan.classList.add('bold');
-
-        const textSpan = document.createElement('span');
-        textSpan.textContent = ' votou em ';
-
-        const genderSpan = document.createElement('span');
-        genderSpan.textContent = vote.gender === 'boy' ? 'Menino' : 'Menina';
-        genderSpan.classList.add('bold', vote.gender === 'boy' ? 'boy-text' : 'girl-text');
-
-        entry.appendChild(nameSpan);
-        entry.appendChild(textSpan);
-        entry.appendChild(genderSpan);
-        log.appendChild(entry);
-    });
-}
-
-// Inicializa o quadro de comentários
 document.getElementById('comment-form').addEventListener('submit', submitComment);
 
-// Inicializa a aplicação ao carregar a página
 window.onload = () => {
     initializeApp();
 
@@ -520,97 +550,6 @@ window.onload = () => {
     const fadeIn = setInterval(() => {
         opacity += 0.02;
         div.style.opacity = opacity;
-
         if (opacity >= 1) clearInterval(fadeIn);
     }, 30);
 };
-
-document.addEventListener("DOMContentLoaded", () => {
-    const balloonContainer = document.querySelector(".balloon-container");
-
-    function createBalloon() {
-        const balloon = document.createElement("div");
-        balloon.classList.add("balloon");
-        balloon.style.left = Math.random() * 100 + "vw";
-        balloon.style.animationDuration = Math.random() * 5 + 5 + "s";
-        balloon.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--balloon-color').trim();
-        balloonContainer.appendChild(balloon);
-
-        balloon.addEventListener("animationend", () => {
-            balloon.remove();
-        });
-    }
-
-    function createConfetti() {
-        const confetti = document.createElement("div");
-        confetti.classList.add("confetti");
-        confetti.style.left = Math.random() * 100 + "vw";
-        confetti.style.animationDuration = Math.random() * 3 + 2 + "s";
-        confetti.style.backgroundColor = "white";
-        balloonContainer.appendChild(confetti);
-
-        confetti.addEventListener("animationend", () => {
-            confetti.remove();
-        });
-    }
-
-    if (revealResult !== 'pending') {
-        setInterval(() => {
-            createBalloon();
-            createConfetti();
-        }, 500);
-    }
-});
-
-// Inicia a animação de balões e confetes
-function startBalloonAndConfettiAnimation() {
-    const balloonContainer = document.querySelector(".balloon-container");
-
-    // Define o número máximo de balões visíveis
-    const MAX_BALLOONS = 50;
-
-    // Função para criar balões e confetes com limite
-    function createBalloon() {
-        // Remove balões antigos se o limite for atingido
-        if (balloonContainer.children.length >= MAX_BALLOONS) {
-            balloonContainer.removeChild(balloonContainer.firstChild);
-        }
-
-        const balloon = document.createElement("div");
-        balloon.classList.add("balloon");
-        balloon.style.left = Math.random() * 100 + "vw";
-        balloon.style.animationDuration = Math.random() * 5 + 5 + "s";
-        balloon.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--balloon-color').trim();
-        balloonContainer.appendChild(balloon);
-
-        // Remove o balão após a animação
-        balloon.addEventListener("animationend", () => {
-            balloon.remove();
-        });
-    }
-
-    function createConfetti() {
-        // Remove confetes antigos se o limite for atingido
-        if (balloonContainer.children.length >= MAX_BALLOONS) {
-            balloonContainer.removeChild(balloonContainer.firstChild);
-        }
-
-        const confetti = document.createElement("div");
-        confetti.classList.add("confetti");
-        confetti.style.left = Math.random() * 100 + "vw";
-        confetti.style.animationDuration = Math.random() * 3 + 2 + "s";
-        confetti.style.backgroundColor = "white"; // Cor fixa para confetes
-        balloonContainer.appendChild(confetti);
-
-        // Remove o confete após a animação
-        confetti.addEventListener("animationend", () => {
-            confetti.remove();
-        });
-    }
-
-    // Gera balões e confetes em intervalos regulares
-    setInterval(() => {
-        createBalloon();
-        createConfetti();
-    }, 500);
-}
