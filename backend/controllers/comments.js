@@ -55,4 +55,42 @@ async function deleteComment(req, res) {
     }
 }
 
-module.exports = { getComments, addComment, deleteComment };
+async function updateComment(req, res) {
+    const { id } = req.params;
+    const { browserId } = req.query;
+    const { name, message } = req.body;
+
+    if (!browserId) {
+        return res.status(400).json({ error: 'Identificador do navegador é obrigatório.' });
+    }
+
+    if (!name || !message) {
+        return res.status(400).json({ error: 'Nome e mensagem são obrigatórios.' });
+    }
+
+    const formattedName = formatName(name);
+
+    try {
+        const result = await pool.query(
+            'SELECT * FROM comments WHERE id = $1 AND browser_id = $2',
+            [id, browserId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(403).json({ error: 'Você não tem permissão para alterar este comentário.' });
+        }
+
+        await pool.query(
+            'UPDATE comments SET name = $1, message = $2 WHERE id = $3',
+            [formattedName, message, id]
+        );
+        res.json({ message: 'Comentário atualizado com sucesso!' });
+    } catch (err) {
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'Já existe um comentário idêntico para este nome.' });
+        }
+        res.status(500).json({ error: 'Erro ao atualizar comentário.' });
+    }
+}
+
+module.exports = { getComments, addComment, deleteComment, updateComment };

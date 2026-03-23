@@ -86,6 +86,175 @@ let revealBgGirlColor = 'rgb(231, 179, 223)';
 
 let enableAutoScroll = false;
 
+const MINE_HINT = 'Alterar ou excluir este item';
+let contextAction = { type: null, vote: null, comment: null };
+let menuAnchorButton = null;
+let pendingVoteForEdit = null;
+let pendingCommentForEdit = null;
+
+function isBrowserOwner(rowBrowserId) {
+    return rowBrowserId != null && String(rowBrowserId) === String(browserId);
+}
+
+function hideContextMenu() {
+    const menu = document.getElementById('context-menu');
+    if (menu) menu.hidden = true;
+    menuAnchorButton = null;
+    contextAction = { type: null, vote: null, comment: null };
+}
+
+function positionMenuNearAnchor(menu, anchor) {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const rect = anchor.getBoundingClientRect();
+            const mw = menu.offsetWidth;
+            const mh = menu.offsetHeight;
+            let left = rect.right - mw;
+            let top = rect.bottom + 4;
+            if (left < 8) left = 8;
+            if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+            if (top + mh > window.innerHeight - 8) top = rect.top - mh - 4;
+            if (top < 8) top = 8;
+            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`;
+        });
+    });
+}
+
+function toggleActionsMenu(anchor, action) {
+    const menu = document.getElementById('context-menu');
+    if (!menu) return;
+    if (menuAnchorButton === anchor && !menu.hidden) {
+        hideContextMenu();
+        return;
+    }
+    contextAction = action;
+    menuAnchorButton = anchor;
+    menu.hidden = false;
+    positionMenuNearAnchor(menu, anchor);
+}
+
+function createEntryActionsButton(onActivate) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'entry-actions-btn';
+    btn.setAttribute('aria-label', MINE_HINT);
+    btn.setAttribute('title', MINE_HINT);
+    btn.setAttribute('aria-haspopup', 'true');
+    btn.innerHTML = `
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="5" r="1.75"/>
+            <circle cx="12" cy="12" r="1.75"/>
+            <circle cx="12" cy="19" r="1.75"/>
+        </svg>
+    `;
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onActivate(btn);
+    });
+    return btn;
+}
+
+function closeVoteEditModal() {
+    const el = document.getElementById('modal-edit-vote');
+    if (el) el.hidden = true;
+    pendingVoteForEdit = null;
+}
+
+function closeCommentEditModal() {
+    const el = document.getElementById('modal-edit-comment');
+    if (el) el.hidden = true;
+    pendingCommentForEdit = null;
+}
+
+function setupContextMenuAndModals() {
+    const menu = document.getElementById('context-menu');
+    if (!menu) return;
+
+    menu.querySelectorAll('[data-context-action]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const action = btn.getAttribute('data-context-action');
+            const vote = contextAction.vote;
+            const comment = contextAction.comment;
+            const type = contextAction.type;
+
+            if (action === 'edit') {
+                if (type === 'vote' && vote) {
+                    pendingVoteForEdit = vote;
+                    hideContextMenu();
+                    document.getElementById('modal-edit-vote').hidden = false;
+                } else if (type === 'comment' && comment) {
+                    pendingCommentForEdit = comment;
+                    hideContextMenu();
+                    document.getElementById('modal-comment-name').value = comment.name;
+                    document.getElementById('modal-comment-message').value = comment.message;
+                    document.getElementById('modal-edit-comment').hidden = false;
+                }
+                return;
+            }
+
+            if (action === 'delete') {
+                hideContextMenu();
+                if (type === 'vote' && vote) deleteVote(vote.id);
+                else if (type === 'comment' && comment) deleteComment(comment.id);
+            }
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#context-menu')) return;
+        hideContextMenu();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            hideContextMenu();
+            closeVoteEditModal();
+            closeCommentEditModal();
+        }
+    });
+
+    document.getElementById('modal-vote-boy').addEventListener('click', async () => {
+        if (!pendingVoteForEdit) return;
+        const v = pendingVoteForEdit;
+        closeVoteEditModal();
+        await submitVote(v.name, 'boy');
+    });
+
+    document.getElementById('modal-vote-girl').addEventListener('click', async () => {
+        if (!pendingVoteForEdit) return;
+        const v = pendingVoteForEdit;
+        closeVoteEditModal();
+        await submitVote(v.name, 'girl');
+    });
+
+    document.getElementById('modal-vote-cancel').addEventListener('click', closeVoteEditModal);
+
+    document.getElementById('modal-edit-vote').addEventListener('click', (e) => {
+        if (e.target.id === 'modal-edit-vote') closeVoteEditModal();
+    });
+
+    document.getElementById('modal-comment-save').addEventListener('click', async () => {
+        if (!pendingCommentForEdit) return;
+        const name = document.getElementById('modal-comment-name').value.trim();
+        const message = document.getElementById('modal-comment-message').value.trim();
+        if (!name || !message) {
+            alert('Por favor, preencha todos os campos.');
+            return;
+        }
+        const id = pendingCommentForEdit.id;
+        closeCommentEditModal();
+        await patchComment(id, name, message);
+    });
+
+    document.getElementById('modal-comment-cancel').addEventListener('click', closeCommentEditModal);
+
+    document.getElementById('modal-edit-comment').addEventListener('click', (e) => {
+        if (e.target.id === 'modal-edit-comment') closeCommentEditModal();
+    });
+}
+
 // ─── UI ───────────────────────────────────────────────────────────────────────
 
 function updateRevealUI() {
@@ -166,7 +335,6 @@ function updateUI(votes) {
     votes.forEach(vote => {
         const entry = document.createElement('div');
         entry.classList.add('vote-entry');
-        entry.onclick = () => deleteVote(vote.id);
 
         const nameSpan = document.createElement('span');
         nameSpan.textContent = vote.name;
@@ -179,9 +347,23 @@ function updateUI(votes) {
         genderSpan.textContent = vote.gender === 'boy' ? 'Menino' : 'Menina';
         genderSpan.classList.add('bold', vote.gender === 'boy' ? 'boy-text' : 'girl-text');
 
-        entry.appendChild(nameSpan);
-        entry.appendChild(textSpan);
-        entry.appendChild(genderSpan);
+        if (isBrowserOwner(vote.browser_id)) {
+            entry.classList.add('entry--mine');
+            const content = document.createElement('div');
+            content.className = 'entry-content';
+            content.appendChild(nameSpan);
+            content.appendChild(textSpan);
+            content.appendChild(genderSpan);
+            const btn = createEntryActionsButton((anchor) => {
+                toggleActionsMenu(anchor, { type: 'vote', vote, comment: null });
+            });
+            entry.appendChild(content);
+            entry.appendChild(btn);
+        } else {
+            entry.appendChild(nameSpan);
+            entry.appendChild(textSpan);
+            entry.appendChild(genderSpan);
+        }
         log.appendChild(entry);
     });
 }
@@ -193,7 +375,6 @@ function updateCommentUI(comments) {
     comments.forEach(comment => {
         const entry = document.createElement('div');
         entry.classList.add('comment-entry');
-        entry.onclick = () => deleteComment(comment.id);
 
         const authorSpan = document.createElement('span');
         authorSpan.textContent = comment.name;
@@ -206,7 +387,19 @@ function updateCommentUI(comments) {
         timestampSpan.textContent = new Date(comment.created_at).toLocaleString();
         timestampSpan.classList.add('timestamp');
 
-        entry.appendChild(authorSpan);
+        if (isBrowserOwner(comment.browser_id)) {
+            entry.classList.add('entry--mine');
+            const head = document.createElement('div');
+            head.className = 'comment-entry-head';
+            head.appendChild(authorSpan);
+            const btn = createEntryActionsButton((anchor) => {
+                toggleActionsMenu(anchor, { type: 'comment', vote: null, comment });
+            });
+            head.appendChild(btn);
+            entry.appendChild(head);
+        } else {
+            entry.appendChild(authorSpan);
+        }
         entry.appendChild(messageP);
         entry.appendChild(timestampSpan);
 
@@ -410,6 +603,27 @@ async function deleteComment(id) {
     });
 }
 
+async function patchComment(id, name, message) {
+    await withLoading(async () => {
+        const response = await fetch(`${apiUrl}/comments/${id}?browserId=${browserId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, message })
+        });
+
+        if (!response.ok) {
+            let msg = 'Erro ao atualizar comentário.';
+            try {
+                const j = await response.json();
+                if (j.error) msg = j.error;
+            } catch (_) { /* ignore */ }
+            throw new Error(msg);
+        }
+
+        await loadComments();
+    });
+}
+
 async function submitComment(event) {
     event.preventDefault();
 
@@ -537,6 +751,8 @@ async function initializeApp() {
         alert('Erro ao inicializar a aplicação. Verifique sua conexão.');
     }
 }
+
+setupContextMenuAndModals();
 
 document.getElementById('comment-form').addEventListener('submit', submitComment);
 

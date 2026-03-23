@@ -46,6 +46,34 @@
         </form>
         <div class="comment-log" id="comment-log"></div>
     </div>
+
+    <div id="context-menu" class="context-menu" hidden role="menu">
+        <button type="button" class="context-menu-item" data-context-action="edit">Alterar</button>
+        <button type="button" class="context-menu-item" data-context-action="delete">Excluir</button>
+    </div>
+
+    <div id="modal-edit-vote" class="modal-overlay" hidden>
+        <div class="modal-dialog" role="dialog" aria-labelledby="modal-edit-vote-title">
+            <h3 id="modal-edit-vote-title">Alterar voto</h3>
+            <p class="modal-hint">Escolha o novo voto:</p>
+            <div class="buttons modal-buttons">
+                <button type="button" class="boy-btn" id="modal-vote-boy">Menino</button>
+                <button type="button" class="girl-btn" id="modal-vote-girl">Menina</button>
+            </div>
+            <button type="button" class="modal-cancel-btn" id="modal-vote-cancel">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="modal-edit-comment" class="modal-overlay" hidden>
+        <div class="modal-dialog" role="dialog" aria-labelledby="modal-edit-comment-title">
+            <h3 id="modal-edit-comment-title">Editar comentário</h3>
+            <input type="text" id="modal-comment-name" placeholder="Seu nome" autocomplete="name">
+            <textarea id="modal-comment-message" placeholder="Digite seu comentário..."></textarea>
+            <button type="button" class="modal-primary-btn" id="modal-comment-save">Atualizar</button>
+            <button type="button" class="modal-cancel-btn" id="modal-comment-cancel">Cancelar</button>
+        </div>
+    </div>
+
     <script src="./js/scripts.js"></script>      
 </body>
 </html>
