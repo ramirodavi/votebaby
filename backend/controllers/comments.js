@@ -1,5 +1,6 @@
 const pool = require('../db');
-const { formatName } = require('../utils/helpers');
+const { notifyClients } = require('../websocket');
+const { formatName, selectRowOwnedByBrowser } = require('../utils/helpers');
 
 async function getComments(req, res) {
     try {
@@ -24,6 +25,7 @@ async function addComment(req, res) {
             'INSERT INTO comments (name, message, browser_id) VALUES ($1, $2, $3)',
             [formattedName, message, browserId]
         );
+        notifyClients({ resource: 'comments' });
         res.status(201).json({ message: 'Comentário adicionado com sucesso!' });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao adicionar comentário.' });
@@ -49,6 +51,7 @@ async function deleteComment(req, res) {
         }
 
         await pool.query('DELETE FROM comments WHERE id = $1', [id]);
+        notifyClients({ resource: 'comments' });
         res.json({ message: 'Comentário removido com sucesso!' });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao excluir comentário.' });
@@ -71,12 +74,9 @@ async function updateComment(req, res) {
     const formattedName = formatName(name);
 
     try {
-        const result = await pool.query(
-            'SELECT * FROM comments WHERE id = $1 AND browser_id = $2',
-            [id, browserId]
-        );
+        const row = await selectRowOwnedByBrowser(pool, 'comments', id, browserId);
 
-        if (result.rows.length === 0) {
+        if (!row) {
             return res.status(403).json({ error: 'Você não tem permissão para alterar este comentário.' });
         }
 
@@ -84,6 +84,7 @@ async function updateComment(req, res) {
             'UPDATE comments SET name = $1, message = $2 WHERE id = $3',
             [formattedName, message, id]
         );
+        notifyClients({ resource: 'comments' });
         res.json({ message: 'Comentário atualizado com sucesso!' });
     } catch (err) {
         if (err.code === '23505') {

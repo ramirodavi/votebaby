@@ -1,6 +1,6 @@
 const pool = require('../db');
 const { notifyClients } = require('../websocket');
-const { formatName } = require('../utils/helpers');
+const { formatName, selectRowOwnedByBrowser } = require('../utils/helpers');
 
 async function getVotes(req, res) {
     try {
@@ -58,12 +58,9 @@ async function deleteVote(req, res) {
     }
 
     try {
-        const result = await pool.query(
-            'SELECT * FROM votes WHERE id = $1 AND browser_id = $2',
-            [id, browserId]
-        );
+        const row = await selectRowOwnedByBrowser(pool, 'votes', id, browserId);
 
-        if (result.rows.length === 0) {
+        if (!row) {
             return res.status(403).json({ error: 'Você não tem permissão para excluir este voto.' });
         }
 

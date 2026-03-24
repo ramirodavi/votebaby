@@ -101,9 +101,8 @@ button:hover {
     background: var(--girl-color);
 }
 .log-container {
-    margin-top: 20px;
+    margin: 20px auto;
     width: 80%;
-    margin: auto;
     background: white;
     padding: 10px;
     border-radius: 10px;
@@ -141,8 +140,16 @@ button:hover {
     background: #f0f0f0;
     padding: 10px;
     border-radius: 5px;
-    font-size: 1.2em;
     text-align: left;
+}
+
+.vote-entry {
+    font-size: 1.2em;
+}
+
+.comment-entry {
+    margin-bottom: 10px;
+    font-size: 0.9em;
 }
 
 .vote-entry.entry--mine {
@@ -183,10 +190,6 @@ button:hover {
 .entry-actions-btn:active {
     background: rgba(0, 0, 0, 0.1);
     color: #333;
-}
-
-.comment-entry {
-    margin-bottom: 10px;
 }
 
 .comment-entry-head {
@@ -281,12 +284,6 @@ button:hover {
     text-align: center;
     font-size: 1.5em;
     color: #333;
-}
-.log-container {
-    margin-bottom: 20px;
-}
-.comment-entry {
-    font-size: 0.9em;
 }
 
 #comment-name,

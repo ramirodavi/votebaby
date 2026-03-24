@@ -1,10 +1,25 @@
 const express = require('express');
 const router = express.Router();
 
+function forwardedFirst(value) {
+    if (!value) return '';
+    return String(value).split(',')[0].trim();
+}
+
+/** URL pública da API vista pelo navegador (Host / X-Forwarded-* do pedido). */
+function publicApiUrl(req) {
+    const proto = forwardedFirst(req.get('x-forwarded-proto')) || req.protocol;
+    const host = forwardedFirst(req.get('x-forwarded-host')) || req.get('host');
+    if (!host) {
+        return `http://localhost:${process.env.PORT || 3000}`;
+    }
+    return `${proto}://${host}`;
+}
+
 // Rota para fornecer as configurações do backend ao frontend
 router.get('/', (req, res) => {
     res.json({
-        apiUrl: process.env.API_URL || `http://localhost:${process.env.PORT || 3000}`,
+        apiUrl: publicApiUrl(req),
         babyBoyName: process.env.BABY_BOY_NAME || 'Menino',
         babyGirlName: process.env.BABY_GIRL_NAME || 'Menina',
         revealResult: process.env.REVEAL_RESULT || 'pending',

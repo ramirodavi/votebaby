@@ -1,23 +1,38 @@
 let apiUrl;
 let webSocketUrl;
+/** URL completa GET /config — definida em initializeApp (localhost fixo; resto via config.json). */
 let configUrl;
 
-const productionUrl = 'https://backend-votebaby.onrender.com/config';
-const developmentUrl = 'http://localhost:3000/config';
+/**
+ * Em localhost usa o backend local. Noutros hosts (ex.: GitHub Pages) lê frontend/config.json
+ * com "configBase": URL HTTPS do backend (sem barra no fim). Edita esse ficheiro ao mudar de deploy.
+ */
+async function resolveConfigUrl() {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3000/config';
+    }
+    const jsonUrl = new URL('config.json', window.location.href);
+    const response = await fetch(jsonUrl);
+    if (!response.ok) {
+        throw new Error('Não foi possível carregar config.json. Coloque config.json junto ao index.html.');
+    }
+    const data = await response.json();
+    const base = (data.configBase || '').trim().replace(/\/$/, '');
+    if (!base) {
+        throw new Error('Em config.json defina "configBase" com a URL HTTPS do backend (ex.: https://meu-api.onrender.com).');
+    }
+    return `${base}/config`;
+}
 
-const productionWebSocket = 'wss://backend-votebaby.onrender.com';
-const developmentWebSocket = 'ws://localhost:3000';
-
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    webSocketUrl = developmentWebSocket;
-    configUrl = developmentUrl;
-} else {
-    webSocketUrl = productionWebSocket;
-    configUrl = productionUrl;
+function apiUrlToWebSocketUrl(apiUrlString) {
+    const u = new URL(apiUrlString);
+    const wsProtocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${wsProtocol}//${u.host}`;
 }
 
 // ─── Utilitários ─────────────────────────────────────────────────────────────
 
+// Manter em sincronia com backend/utils/helpers.js (formatName).
 function formatName(name) {
     return name.trim().split(' ')
         .slice(0, 2)
@@ -434,6 +449,8 @@ async function loadConfig() {
         revealBgBoyColor = config.revealBgBoyColor;
         revealBgGirlColor = config.revealBgGirlColor;
 
+        webSocketUrl = apiUrlToWebSocketUrl(apiUrl);
+
         updateRevealUI();
     });
 }
@@ -456,7 +473,11 @@ function initializeWebSocket() {
             try {
                 const data = JSON.parse(event.data);
                 console.log('Mensagem recebida via WebSocket:', data);
-                await loadVotes();
+                if (data.resource === 'comments') {
+                    await loadComments({ silent: true });
+                } else {
+                    await loadVotes({ silent: true });
+                }
             } catch (err) {
                 console.error('Erro ao processar mensagem do WebSocket:', err.message);
             }
@@ -480,15 +501,31 @@ function initializeWebSocket() {
 
 // ─── Votos ────────────────────────────────────────────────────────────────────
 
-async function loadVotes() {
-    await withLoading(async () => {
-        const response = await fetch(`${apiUrl}/votes`);
+async function fetchVotesJson() {
+    const response = await fetch(`${apiUrl}/votes`);
 
-        if (!response.ok) {
-            throw new Error('Erro ao carregar votos. Por favor, tente novamente mais tarde.');
+    if (!response.ok) {
+        throw new Error('Erro ao carregar votos. Por favor, tente novamente mais tarde.');
+    }
+
+    return response.json();
+}
+
+async function loadVotes(options = {}) {
+    const silent = options.silent === true;
+
+    if (silent) {
+        try {
+            const votes = await fetchVotesJson();
+            updateUI(votes);
+        } catch (err) {
+            console.error('Erro ao atualizar votos (WebSocket):', err.message);
         }
+        return;
+    }
 
-        const votes = await response.json();
+    await withLoading(async () => {
+        const votes = await fetchVotesJson();
         updateUI(votes);
     });
 }
@@ -574,15 +611,31 @@ function triggerCelebration(gender) {
 
 // ─── Comentários ──────────────────────────────────────────────────────────────
 
-async function loadComments() {
-    await withLoading(async () => {
-        const response = await fetch(`${apiUrl}/comments`);
+async function fetchCommentsJson() {
+    const response = await fetch(`${apiUrl}/comments`);
 
-        if (!response.ok) {
-            throw new Error('Erro ao carregar comentários. Por favor, tente novamente mais tarde.');
+    if (!response.ok) {
+        throw new Error('Erro ao carregar comentários. Por favor, tente novamente mais tarde.');
+    }
+
+    return response.json();
+}
+
+async function loadComments(options = {}) {
+    const silent = options.silent === true;
+
+    if (silent) {
+        try {
+            const comments = await fetchCommentsJson();
+            updateCommentUI(comments);
+        } catch (err) {
+            console.error('Erro ao atualizar comentários (WebSocket):', err.message);
         }
+        return;
+    }
 
-        const comments = await response.json();
+    await withLoading(async () => {
+        const comments = await fetchCommentsJson();
         updateCommentUI(comments);
     });
 }
@@ -738,6 +791,7 @@ function startBalloonAndConfettiAnimation() {
 
 async function initializeApp() {
     try {
+        configUrl = await resolveConfigUrl();
         await loadConfig();
         initializeWebSocket();
         await loadVotes();

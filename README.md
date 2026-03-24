@@ -1,197 +1,263 @@
-# Votação de Chá Revelação 🎉👶
+# 🎉👶 Votebaby — Chá revelação
 
-Este projeto é uma aplicação interativa de votação para eventos de chá revelação. Ele permite que os participantes votem se acreditam que o bebê será **Menino** ou **Menina** de forma divertida e visualmente atraente.
+Aplicação web para **chá revelação**: convidados votam **Menino** ou **Menina**, deixam comentários e veem o resultado atualizar em tempo real. O painel é configurável (cores, nomes dos bebês, texto da revelação, modo “ainda não revelou” ou já revelado), com animações, barras de percentagem e contadores.
 
----
-
-## 🚀 Funcionalidades
-
-- **Votação Dinâmica:** Os participantes podem votar e atualizar seus votos em tempo real.
-- **Atualização Automática:** Os resultados das votações são atualizados em todos os clientes conectados usando WebSocket.
-- **Feedback Visual:** Gráficos em barra mostram a porcentagem de votos em tempo real.
-- **Animações Divertidas:** Balões e confetes celebram cada voto.
-- **Proteção de Dados:** Cada participante é identificado por um `browserId` único armazenado localmente.
-- **Ambientes Diferenciados:** URLs dinâmicas para desenvolvimento e produção garantem flexibilidade.
+O **frontend** é estático (HTML, CSS, JavaScript). O **backend** é Node.js com Express, PostgreSQL e WebSockets no mesmo processo HTTP.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## ✨ Funcionalidades
 
-### Backend
-- **Node.js:** Plataforma para executar o servidor.
-- **Express:** Framework para criação do servidor HTTP e endpoints.
-- **PostgreSQL:** Banco de dados relacional para armazenar os votos.
-- **WebSocket:** Comunicação em tempo real entre o backend e o frontend.
-- **dotenv:** Gerenciamento de variáveis de ambiente.
-
-### Frontend
-- **HTML/CSS:** Estrutura e estilo para criar uma interface amigável e visualmente agradável.
-- **JavaScript:** Lógica de interação com o backend, manipulação da DOM e animações.
+- 🗳️ **Votação** com percentagens e histórico; cada pessoa pode **alterar** o voto (modal) ou **apagar** (menu de contexto) apenas o próprio registo.
+- 💬 **Comentários** com data/hora; o autor pode **editar** ou **apagar** só os próprios.
+- ⚡ **Tempo real** para votos e comentários: o servidor notifica os clientes ligados por WebSocket após alterações.
+- 🎀 **Modo revelação**: com resultado `pending` mostra votação e formulário de comentários; após revelar (`boy` / `girl`), ajusta layout, animações (🎈 balões, 🎊 confetes) e textos vindos da configuração.
+- 🔑 **Identificação no navegador**: `browserId` em `localStorage` para permitir editar/apagar só o que é teu, sem contas.
+- 🛡️ **CORS** limitado à origem configurada; **rate limiting** nas rotas de escrita de votos e comentários.
 
 ---
 
-## 🏗️ Estrutura do Projeto
+## 🛠️ Tecnologias
 
-```plaintext
+| Camada | Tecnologias |
+|--------|-------------|
+| Frontend | HTML5, CSS3, JavaScript (sem bundler) |
+| Backend | Node.js, Express, `pg`, `ws`, `cors`, `dotenv`, `express-rate-limit`, `uuid`, `useragent` |
+| Dados | PostgreSQL (ex.: Neon) |
+
+---
+
+## 🏗️ Arquitetura e fluxo
+
+### 🗺️ Mapa de componentes
+
+```mermaid
+flowchart TB
+  subgraph client ["Navegador"]
+    direction TB
+    U([Utilizador])
+    U --> P([Pagina estatica])
+  end
+
+  subgraph fe ["Frontend estatico"]
+    direction LR
+    HTML[index.html]
+    JS[scripts.js]
+    CSS[styles.css]
+    CFG[config.json]
+    HTML --> JS
+    JS --> CSS
+    CFG -.->|URL base API em producao| JS
+  end
+
+  subgraph be ["Backend Node"]
+    direction TB
+    SRV[server.js]
+    RT[Rotas REST]
+    CTRL[Controllers]
+    DBL[(Pool PostgreSQL)]
+    WSM[[WebSocket]]
+    SRV --> RT
+    RT --> CTRL
+    CTRL --> DBL
+    CTRL -->|notifyClients| WSM
+  end
+
+  subgraph data ["Persistencia"]
+    PG[(PostgreSQL)]
+  end
+
+  P --> HTML
+  JS <-->|HTTP REST| RT
+  JS <-->|WebSocket| WSM
+  DBL --> PG
+```
+
+### ⏱️ Sequência: arranque e tempo real
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as Utilizador
+  participant FE as Frontend
+  participant API as API REST
+  participant DB as PostgreSQL
+  participant WS as WebSocket
+
+  U->>FE: Abre a pagina
+  FE->>API: GET /config
+  API-->>FE: tema cores textos apiUrl
+
+  FE->>API: GET /votes e /comments
+  API->>DB: consultas
+  DB-->>API: linhas
+  API-->>FE: JSON listas
+
+  FE->>WS: Abre ligacao
+  Note over FE,WS: mesmo host que a API
+
+  U->>FE: Vota ou altera comentario
+  FE->>API: POST PATCH ou DELETE
+  API->>DB: gravar ou apagar
+  API->>WS: broadcast a todos
+  WS-->>FE: evento
+  FE->>API: GET listas atualizadas
+  API-->>FE: dados frescos
+```
+
+### 📋 Resumo do cliente
+
+1. Carrega a página e, conforme o ambiente, resolve o URL do backend (localhost em desenvolvimento; em produção lê `config.json` para o URL base).
+2. Chama `GET /config` para textos, cores e `apiUrl` (definida pelo servidor com base no pedido).
+3. Usa `apiUrl` para votos e comentários; mantém WebSocket no mesmo host para, ao receber eventos, voltar a pedir as listas.
+
+---
+
+## 📂 Estrutura do repositório
+
+```text
 .
-├── frontend
-│   ├── index.html          # Página inicial do frontend
-│   ├── css
-│   │   └── styles.css      # Arquivo de estilos do frontend
-│   ├── js
-│       └── scripts.js      # Lógica principal do frontend
-└── backend
-    ├── server.js           # Servidor principal Node.js
-    ├── package.json        # Dependências do backend
-    ├── package-lock.json   # Lock das dependências
-    └── .env.example        # Exemplo de variáveis de ambiente
+├── frontend/
+│   ├── config.json             # Em producao: URL HTTPS do backend (configBase)
+│   ├── index.html
+│   ├── css/
+│   │   └── styles.css
+│   └── js/
+│       └── scripts.js          # UI, API, WebSocket, modais, menu de contexto
+├── backend/
+│   ├── server.js               # Express, CORS, rate limit, trust proxy
+│   ├── db.js                   # Pool PostgreSQL
+│   ├── websocket.js            # Servidor WS e notificacoes apos votos e comentarios
+│   ├── package.json
+│   ├── nodemon.json            # Watch para npm run dev
+│   ├── .env.example
+│   ├── database/
+│   │   └── schema.sql          # Tabelas votes e comments
+│   ├── routes/
+│   │   ├── index.js            # Monta /votes, /comments, /config
+│   │   ├── votes.js
+│   │   ├── comments.js
+│   │   └── config.js           # JSON de configuracao do painel
+│   ├── controllers/
+│   │   ├── votes.js
+│   │   └── comments.js
+│   └── utils/
+│       └── helpers.js
+└── README.md
 ```
 
 ---
 
-## 📦 Configuração do Projeto
+## 📦 Pré-requisitos
 
-### Pré-requisitos
-
-- [Node.js](https://nodejs.org/) (v14 ou superior)
-- [PostgreSQL](https://www.postgresql.org/) (Banco de dados configurado)
-- [npm](https://www.npmjs.com/) (Gerenciador de pacotes do Node.js)
-
----
-
-### Configuração do Backend
-
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/ramirodavi/votebaby.git
-   ```
-
-2. Navegue para a pasta `backend`:
-   ```bash
-   cd backend
-   ```
-
-3. Instale as dependências:
-   ```bash
-   npm install
-   ```
-
-4. Configure o arquivo `.env` na pasta `backend`:
-   ```plaintext
-   PG_USER=seu_usuario
-   PG_HOST=seu_host
-   PG_DATABASE=seu_banco_de_dados
-   PG_PASSWORD=sua_senha
-   PG_PORT=sua_porta
-   API_URL=https://backend-votebaby.onrender.com/votes
-   PORT=3000
-
-   # Nomes dos bebês
-   BABY_BOY_NAME=João
-   BABY_GIRL_NAME=Maria
-
-   # Resultado do chá revelação (opções: "boy", "girl", "pending")
-   REVEAL_RESULT=pending
-
-   # Texto adicional para a revelação
-   REVEAL_TEXT=Bem vindo(a) ao mundo
-
-   # Cores para o sexo masculino
-   BOY_COLOR=rgb(58, 177, 98)
-   BG_BOY_COLOR=rgb(172, 241, 197)
-
-   # Cores para o sexo feminino
-   GIRL_COLOR=rgb(219, 130, 207)
-   BG_GIRL_COLOR=rgb(231, 179, 223)
-
-   # Cores dos balões
-   BALLOON_BOY_COLOR=rgb(58, 177, 98)
-   BALLOON_GIRL_COLOR=rgb(219, 130, 207)
-
-   # Cores do fundo da div de revelação
-   REVEAL_BG_BOY_COLOR=rgb(172, 241, 197)
-   REVEAL_BG_GIRL_COLOR=rgb(231, 179, 223)
-
-   # Ativar/desativar o scroll automático (opções: "true", "false")
-   ENABLE_AUTO_SCROLL=true
-   ```
-
-5. Inicie o servidor:
-   ```bash
-   npm start
-   ou
-   nodemon server.js
-   ```
+- [Node.js](https://nodejs.org/) (recomendado: LTS)
+- [npm](https://www.npmjs.com/)
+- Base **PostgreSQL** acessível (ex.: [Neon](https://neon.tech))
+- [Git](https://git-scm.com/) (opcional)
 
 ---
 
-### Configuração do Frontend
+## ⚙️ Backend
 
-1. Navegue para a pasta `frontend`:
-   ```bash
-   cd frontend
-   ```
+### Clonar e instalar
 
-2. Abra o arquivo `index.html` no navegador ou sirva a pasta com um servidor local (ex.: Live Server).
+```bash
+git clone https://github.com/ramirodavi/votebaby.git
+cd votebaby/backend
+npm install
+```
+
+### Base de dados
+
+Cria a base e executa [`backend/database/schema.sql`](backend/database/schema.sql) no teu cliente SQL.
+
+### Variáveis de ambiente
+
+```bash
+cp .env.example .env
+```
+
+Edita o `.env`: credenciais PostgreSQL, `FRONTEND_URL` (origem permitida pelo CORS), `NODE_ENV`, textos e cores do chá, etc. O [`.env.example`](backend/.env.example) documenta cada variável. **Não commites o `.env`**.
+
+### Arranque
+
+| Comando | Uso |
+|---------|-----|
+| `npm start` | Executa `node server.js`. Usa em produção (Render, etc.). |
+| `npm run dev` | Desenvolvimento com **nodemon** (reinício ao alterares código em `routes`, `controllers`, `server.js`, `db.js` ou `.env`). |
+
+Equivalente manual:
+
+```bash
+npx nodemon server.js
+```
+
+---
+
+## 🖥️ Frontend
+
+Não há `npm` no frontend: abre a pasta com um servidor HTTP local (ex.: **Live Server** em `http://127.0.0.1:5500`).
+
+### Desenvolvimento local
+
+Com o hostname **localhost** ou **127.0.0.1**, o `scripts.js` usa o backend em `http://localhost:3000` para `GET /config` e para a API.
+
+### Produção (ex.: GitHub Pages)
+
+O ficheiro [`frontend/config.json`](frontend/config.json) define o URL **HTTPS** da API (sem barra no fim), para o primeiro pedido à configuração:
+
+```json
+{
+  "configBase": "https://teu-backend.onrender.com"
+}
+```
+
+Confirma que **`FRONTEND_URL`** no `.env` do backend coincide com o URL público do site (CORS).
+
+---
+
+## 🔌 API (resumo)
+
+| Método | Caminho | Descrição |
+|--------|---------|-----------|
+| `GET` | `/config` | Configuração do painel (textos, cores, `apiUrl`, etc.) |
+| `GET` | `/votes` | Lista de votos |
+| `POST` | `/votes` | Corpo: `name`, `gender`, `browserId` — cria ou atualiza |
+| `DELETE` | `/votes/:id?browserId=` | Remove voto próprio |
+| `GET` | `/comments` | Lista de comentários |
+| `POST` | `/comments` | Novo comentário |
+| `PATCH` | `/comments/:id?browserId=` | Atualiza comentário próprio |
+| `DELETE` | `/comments/:id?browserId=` | Remove comentário próprio |
+
+**WebSocket:** mesmo host/porta que a API; após alterações em votos ou comentários o cliente atualiza a lista correspondente.
 
 ---
 
 ## 🌐 Deploy
 
-### Backend no Render
+### ☁️ API (ex.: Render)
 
-1. Acesse o [Render](https://render.com) e crie um novo **Web Service**.
-2. Configure o repositório GitHub e as variáveis de ambiente (`PG_USER`, `PG_HOST`, etc.).
-3. Configure os comandos:
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start ou nodemon server.js`
-4. O Render gerará uma URL pública para o backend.
+1. Criar **Web Service** com o código do `backend`.
+2. Variáveis de ambiente: PostgreSQL, `NODE_ENV=production`, `FRONTEND_URL` com o URL do site estático, etc.
+3. **Build:** `npm install`
+4. **Start:** `npm start`  
+5. O serviço injeta `PORT`; o host público do pedido define o `apiUrl` devolvido em `/config`.
 
-### Frontend no GitHub Pages
+### 📄 Site estático (ex.: GitHub Pages)
 
-1. Suba a pasta `frontend` em um repositório GitHub.
-2. Ative o **GitHub Pages** pelo repositório.
-
----
-
-## 🧪 Testando o Splash de Carregamento
-
-Para testar o comportamento do splash em operações demoradas, você pode:
-
-1. Simular atraso no backend:
-   ```javascript
-   await new Promise(resolve => setTimeout(resolve, 2000)); // 2 segundos de atraso
-   ```
-
-2. Simular atraso no frontend:
-   ```javascript
-   await delay(2000); // Simula 2 segundos de atraso
-   ```
+1. Publicar a pasta `frontend`.
+2. Ajustar `config.json` com o URL HTTPS do backend.
+3. Garantir que `FRONTEND_URL` no backend corresponde ao URL do GitHub Pages.
 
 ---
 
-## 📂 Estrutura do Código
+## 📜 Licença
 
-### Backend
-
-- **`server.js`:** Configura o servidor, endpoints da API e comunicação WebSocket.
-- **WebSocket:** Envia atualizações para os clientes em tempo real.
-
-### Frontend
-
-- **`scripts.js`:** Gerencia interações com o backend e atualizações na interface.
-- **Animações:** Implementação de confetes e balões dinâmicos.
-
----
-
-## 📝 Licença
-
-Este projeto é de código aberto e pode ser utilizado para fins educacionais, eventos sociais ou pessoais. Contribuições são bem-vindas!
+Projeto de código aberto para fins educacionais, eventos ou uso pessoal. Contribuições são bem-vindas.
 
 ---
 
 ## 📧 Contato
 
-Se tiver dúvidas ou sugestões, entre em contato:
-- **Email:** davilopesramiro@gmail.com
+- **Email:** davilopesramiro@gmail.com  
 - **GitHub:** [ramirodavi](https://github.com/ramirodavi/)

@@ -7,6 +7,7 @@ const { setupWebSocket } = require('./websocket');
 const routes = require('./routes');
 
 const app = express();
+app.set('trust proxy', 1);
 const server = createServer(app);
 const PORT = process.env.PORT || 3000;
 
