@@ -253,7 +253,7 @@ Confirma que **`FRONTEND_URL`** no `.env` do backend coincide com o URL público
 
 ## 📜 Licença
 
-Projeto de código aberto para fins educacionais, eventos ou uso pessoal. Contribuições são bem-vindas.
+Este projeto está licenciado sob a licença **MIT** — consulta o ficheiro [`LICENSE`](LICENSE) para mais detalhes. Podes usar, copiar, modificar e distribuir livremente, incluindo para fins educacionais, eventos ou uso pessoal. Contribuições são bem-vindas.
 
 ---
 

@@ -459,10 +459,9 @@ async function loadConfig() {
 
 function initializeWebSocket() {
     let reconnectDelay = 1000;
-    let socket;
 
     function connect() {
-        socket = new WebSocket(webSocketUrl);
+        const socket = new WebSocket(webSocketUrl);
 
         socket.onopen = () => {
             console.log('Conexão com WebSocket estabelecida:', webSocketUrl);
