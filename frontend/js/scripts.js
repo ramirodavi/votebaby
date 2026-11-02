@@ -299,6 +299,8 @@ function updateRevealUI() {
     document.documentElement.style.setProperty('--bg-girl-color', bgGirlColor);
     document.documentElement.style.setProperty('--balloon-color', revealResult === 'girl' ? balloonGirlColor : balloonBoyColor);
     document.documentElement.style.setProperty('--reveal-bg-color', revealResult === 'girl' ? revealBgGirlColor : revealBgBoyColor);
+    // Barra do navegador no celular com a mesma cor do topo do gradiente de fundo.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bgGirlColor);
 
     if (revealResult === 'pending') {
         revealDiv.style.display = 'none';

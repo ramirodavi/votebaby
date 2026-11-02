@@ -214,6 +214,8 @@ O ficheiro [`frontend/config.json`](frontend/config.json) define o URL **HTTPS**
 
 Confirma que **`FRONTEND_URL`** no `.env` do backend coincide com o URL público do site (CORS).
 
+A prévia do link (WhatsApp e redes sociais) usa as tags Open Graph do [`frontend/index.html`](frontend/index.html), com URLs absolutas do site publicado (`og:url` e `og:image`, que aponta para [`frontend/og-image.jpg`](frontend/og-image.jpg)). Ajusta-as se publicares noutro endereço.
+
 ---
 
 ## 🔌 API (resumo)
