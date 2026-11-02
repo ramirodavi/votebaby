@@ -501,6 +501,9 @@ function renderEmptyState(container, message) {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+// Percentual mínimo de uma parte da barra para exibir o texto dentro dela.
+const MIN_PCT_LABEL = 12;
+
 /** Linha abaixo da barra: quem está na frente, empate ou nenhum voto. */
 function scoreStatus(boyVotes, girlVotes) {
     const total = boyVotes + girlVotes;
@@ -582,8 +585,12 @@ function updateUI(votes) {
     // Complemento (e não um segundo arredondamento): os dois somam sempre 100%.
     const girlPct = total ? 100 - boyPct : 0;
 
-    document.getElementById('boy-bar').style.width = `${boyPct}%`;
-    document.getElementById('girl-bar').style.width = `${girlPct}%`;
+    [['boy-bar', boyPct], ['girl-bar', girlPct]].forEach(([id, pct]) => {
+        const bar = document.getElementById(id);
+        bar.style.width = `${pct}%`;
+        // Abaixo disso o texto não cabe e apareceria cortado (o valor continua no placar).
+        bar.textContent = pct >= MIN_PCT_LABEL ? `${pct}%` : '';
+    });
     document.getElementById('boy-count').textContent = boyVotes;
     document.getElementById('girl-count').textContent = girlVotes;
     document.getElementById('boy-pct').textContent = `${boyPct}%`;
