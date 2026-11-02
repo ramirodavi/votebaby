@@ -404,6 +404,13 @@ function setupContextMenuAndModals() {
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
 
+// Textos originais do index.html, restaurados se a revelação for desfeita ao vivo.
+const DEFAULT_TEXTS = {
+    logTitle: document.getElementById('log-title').textContent,
+    commentTitle: document.getElementById('comment-title').textContent,
+    commentPlaceholder: document.getElementById('comment-message').placeholder,
+};
+
 function updateRevealUI() {
     const revealDiv = document.getElementById('revelacao');
     const voteSection = document.querySelector('.vote-section');
@@ -432,6 +439,12 @@ function updateRevealUI() {
         voteSection.querySelector('h2').style.display = 'block';
         voteSection.querySelector('.input-container').style.display = 'block';
         voteSection.querySelector('.buttons').style.display = 'flex';
+
+        // A configuração pode voltar a "pending" ao vivo (página de configuração): desfaz os textos da revelação.
+        document.getElementById('log-title').textContent = DEFAULT_TEXTS.logTitle;
+        document.getElementById('comment-title').textContent = DEFAULT_TEXTS.commentTitle;
+        document.getElementById('comment-message').placeholder = DEFAULT_TEXTS.commentPlaceholder;
+        balloonContainer.replaceChildren();
     } else {
         revealDiv.style.display = 'block';
         voteSection.style.display = 'block';
@@ -441,10 +454,12 @@ function updateRevealUI() {
         commentLog.style.display = 'block';
         balloonContainer.style.display = 'block';
 
-        if (allowCommentsAfterReveal) {
-            document.getElementById('comment-title').textContent = '💌 Deixe um recado para o bebê';
-            document.getElementById('comment-message').placeholder = 'Escreva seu recado para o bebê e os papais...';
-        }
+        document.getElementById('comment-title').textContent = allowCommentsAfterReveal
+            ? '💌 Deixe um recado para o bebê'
+            : DEFAULT_TEXTS.commentTitle;
+        document.getElementById('comment-message').placeholder = allowCommentsAfterReveal
+            ? 'Escreva seu recado para o bebê e os papais...'
+            : DEFAULT_TEXTS.commentPlaceholder;
 
         voteSection.querySelector('h2').style.display = 'none';
         voteSection.querySelector('.input-container').style.display = 'none';
@@ -794,6 +809,24 @@ async function loadConfig() {
     updateRevealUI();
 }
 
+/**
+ * Configuração alterada na página de configuração (evento { resource: 'config' }):
+ * aplica cores, nomes e textos sem recarregar e, se o resultado acabou de ser revelado, toca a sequência.
+ */
+async function reloadConfig() {
+    const previousResult = revealResult;
+    try {
+        await loadConfig();
+    } catch (err) {
+        console.error('Erro ao recarregar a configuração:', err.message);
+        return;
+    }
+    updateUI(votesState);
+    updateCommentUI(commentsState);
+    if (isTelao) updateQrTitle();
+    if (revealResult !== previousResult) await maybePlayRevealShow();
+}
+
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 
 const CONNECTION_LABELS = {
@@ -826,6 +859,11 @@ function applyChange(list, { type, data }, compare) {
  * Eventos sem dados (formato antigo do backend) recarregam a lista correspondente.
  */
 async function applyRealtimeEvent(event) {
+    if (event.resource === 'config') {
+        await reloadConfig();
+        return;
+    }
+
     const isComment = event.resource === 'comments';
 
     if (!event.type || !event.data) {
@@ -1177,8 +1215,11 @@ function startAutoScroll(speed, interval) {
 
 // ─── Animação de balões e confetes ────────────────────────────────────────────
 
+let balloonTimer = null;
+
 function startBalloonAndConfettiAnimation() {
-    if (prefersReducedMotion()) return;
+    // updateRevealUI roda de novo a cada mudança de configuração: um único gerador basta.
+    if (prefersReducedMotion() || balloonTimer) return;
 
     const balloonContainer = document.querySelector('.balloon-container');
     const MAX_BALLOONS = 40;
@@ -1213,9 +1254,9 @@ function startBalloonAndConfettiAnimation() {
         confetti.addEventListener('animationend', () => confetti.remove());
     }
 
-    // Com a aba oculta não cria elementos (economiza bateria e não acumula ao voltar).
-    setInterval(() => {
-        if (document.hidden) return;
+    // Com a aba oculta (economiza bateria e não acumula ao voltar) ou a revelação desfeita, não cria elementos.
+    balloonTimer = setInterval(() => {
+        if (document.hidden || revealResult === 'pending') return;
         createBalloon();
         createConfetti();
     }, 800);
@@ -1328,12 +1369,17 @@ function guestUrl() {
     return url.toString();
 }
 
-async function renderQrCode() {
-    const url = guestUrl();
+/** Chamada também quando a configuração muda ao vivo (resultado / comentários). */
+function updateQrTitle() {
     let qrTitle = 'Acompanhe pelo celular!\u00A0📱';
     if (revealResult === 'pending') qrTitle = 'Vote pelo celular!\u00A0📱';
     else if (commentsOpen()) qrTitle = 'Deixe seu recado pelo celular!\u00A0💌';
     document.getElementById('qr-title').textContent = qrTitle;
+}
+
+async function renderQrCode() {
+    const url = guestUrl();
+    updateQrTitle();
     document.getElementById('qr-url').textContent = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
     document.getElementById('qr-card').hidden = false;
 

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Página de uso interno: fora dos buscadores e sem prévia de link -->
+    <meta name="robots" content="noindex, nofollow">
+    <title>Configuração - Chá Revelação</title>
+    <meta name="theme-color" content="#e7b3df">
+
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Pacifico&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/admin.css">
+</head>
+<body class="admin">
+    <main class="admin-page">
+        <header class="admin-header">
+            <h1>Chá Revelação</h1>
+            <p class="admin-subtitle">⚙️ Configuração</p>
+            <nav class="admin-links" id="admin-links" hidden>
+                <a href="./index.html" target="_blank" rel="noopener">Abrir site ↗</a>
+                <a href="./index.html?telao=1" target="_blank" rel="noopener">Abrir telão ↗</a>
+                <button type="button" class="link-button" id="logout">Sair</button>
+            </nav>
+        </header>
+
+        <!-- Login: a senha é a ADMIN_PASSWORD do backend e fica só nesta aba (sessionStorage) -->
+        <form id="login-form" class="admin-card login-card">
+            <h2>🔒 Entrar</h2>
+            <p class="field-help">Use a senha definida em <code>ADMIN_PASSWORD</code> no backend.</p>
+            <div class="password-field">
+                <input type="password" id="password" placeholder="Senha" aria-label="Senha" autocomplete="current-password" required>
+                <button type="button" class="link-button" id="toggle-password" aria-label="Mostrar senha">👁️</button>
+            </div>
+            <p class="form-error" id="login-error" role="alert" hidden></p>
+            <button type="submit" class="primary-button" id="login-submit">Entrar</button>
+        </form>
+
+        <div id="settings" hidden>
+            <p class="admin-note admin-note--warning" id="persistence-note" hidden>
+                ⚠️ <strong>RENDER_API_KEY</strong> e <strong>RENDER_SERVICE_ID</strong> não estão configurados no backend:
+                as alterações valem na hora, mas <strong>só até o próximo reinício</strong> do servidor.
+            </p>
+
+            <section class="admin-card">
+                <h2>🎀 Revelação</h2>
+                <div id="section-reveal"></div>
+            </section>
+
+            <section class="admin-card">
+                <h2>👶 Nomes das opções</h2>
+                <div id="section-names"></div>
+            </section>
+
+            <section class="admin-card">
+                <h2>🎨 Cores</h2>
+                <p class="field-help">Toque na amostra para escolher a cor ou digite <code>#rrggbb</code> / <code>rgb(r, g, b)</code>. A pré-visualização acompanha as mudanças.</p>
+                <div class="preview" id="preview" aria-hidden="true">
+                    <div class="preview-toolbar">
+                        <span>Pré-visualização</span>
+                        <div class="segmented segmented--small" id="preview-mode">
+                            <button type="button" data-mode="pending" class="is-active">Votação</button>
+                            <button type="button" data-mode="boy">Revelado: menino</button>
+                            <button type="button" data-mode="girl">Revelado: menina</button>
+                        </div>
+                    </div>
+                    <div class="preview-stage">
+                        <div class="preview-balloons"><span></span><span></span><span></span></div>
+                        <div class="preview-reveal" id="preview-reveal">
+                            <span id="preview-reveal-title"></span>
+                            <span class="preview-reveal-text" id="preview-reveal-text"></span>
+                        </div>
+                        <div class="preview-card">
+                            <div class="preview-buttons">
+                                <span class="preview-btn preview-btn--boy" id="preview-boy-name"></span>
+                                <span class="preview-btn preview-btn--girl" id="preview-girl-name"></span>
+                            </div>
+                            <div class="preview-bar">
+                                <span class="preview-bar-boy">40%</span>
+                                <span class="preview-bar-girl">60%</span>
+                            </div>
+                            <p class="preview-text">
+                                <strong class="preview-ink-boy" id="preview-boy-ink"></strong> ×
+                                <strong class="preview-ink-girl" id="preview-girl-ink"></strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="color-groups">
+                    <div>
+                        <h3 class="color-group-title color-group-title--boy">Menino</h3>
+                        <div id="section-colors-boy"></div>
+                    </div>
+                    <div>
+                        <h3 class="color-group-title color-group-title--girl">Menina</h3>
+                        <div id="section-colors-girl"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="admin-card">
+                <h2>📺 Página</h2>
+                <div id="section-page"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Barra fixa: aparece quando há alterações por salvar -->
+    <div class="save-bar" id="save-bar" hidden>
+        <span class="save-bar-count" id="changes-count"></span>
+        <button type="button" class="secondary-button" id="discard">Descartar</button>
+        <button type="button" class="primary-button" id="save">Salvar</button>
+    </div>
+
+    <div id="modal-confirm" class="modal-overlay" hidden>
+        <div class="modal-dialog" role="alertdialog" aria-modal="true" aria-labelledby="modal-confirm-title" aria-describedby="modal-confirm-message">
+            <h3 id="modal-confirm-title">Revelar agora?</h3>
+            <p class="modal-hint" id="modal-confirm-message"></p>
+            <button type="button" class="modal-primary-btn" id="modal-confirm-ok">Sim, salvar</button>
+            <button type="button" class="modal-cancel-btn" id="modal-confirm-cancel">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="./js/admin.js"></script>
+</body>
+</html>

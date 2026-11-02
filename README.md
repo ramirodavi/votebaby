@@ -12,7 +12,8 @@ O **frontend** é estático (HTML, CSS, JavaScript). O **backend** é Node.js co
 - 💬 **Comentários** em mural com horário relativo ("há 5 minutos"); o autor pode **editar** ou **apagar** só os próprios.
 - ⚡ **Tempo real** para votos e comentários: o servidor envia por WebSocket o registo alterado e as páginas atualizam-se (com aviso "Fulano votou em…").
 - 🎀 **Modo revelação**: com resultado `pending` mostra a votação; após revelar (`boy` / `girl`), a primeira visita de cada convidado mostra uma contagem 3‑2‑1 com a cor do resultado e confetes, e a página passa a mostrar **quem acertou**. Os comentários depois da revelação são opcionais: `ALLOW_COMMENTS_AFTER_REVEAL=true` mantém o formulário aberto ("Deixe um recado para o bebê"); por padrão (`false`) ele some e o servidor recusa comentários novos.
-- 📺 **Modo telão**: abre o site com `?telao=1` (ex.: `https://teu-usuario.github.io/votebaby/frontend/?telao=1`) num computador ligado à TV/projetor. Mostra placar, votos e recados numa só tela, com rolagem automática, **QR Code** para os convidados abrirem a página e a sequência da revelação sempre que a página é aberta (recarrega-a no momento da revelação).
+- 📺 **Modo telão**: abre o site com `?telao=1` (ex.: `https://teu-usuario.github.io/votebaby/frontend/?telao=1`) num computador ligado à TV/projetor. Mostra placar, votos e recados numa só tela, com rolagem automática, **QR Code** para os convidados abrirem a página e a sequência da revelação sempre que a página é aberta (ou ao vivo, quando o resultado é alterado na página de configuração).
+- ⚙️ **Página de configuração** (`admin.html`, protegida por senha): altera nomes, resultado, frase, cores e comportamento sem mexer no Render. Vale na hora em todos os celulares e no telão abertos — inclusive a **revelação ao vivo** — e fica gravado nas variáveis do Render. Ver [Página de configuração](#️-página-de-configuração).
 - 🔑 **Identificação no navegador**: `browserId` em `localStorage` para permitir editar/apagar só o que é teu, sem contas.
 - 🛡️ **CORS** limitado à origem configurada; **rate limiting** nas rotas de escrita de votos e comentários.
 
@@ -216,6 +217,19 @@ O ficheiro [`frontend/config.json`](frontend/config.json) define o URL **HTTPS**
 Confirma que **`FRONTEND_URL`** no `.env` do backend coincide com o URL público do site (CORS).
 
 A prévia do link (WhatsApp e redes sociais) usa as tags Open Graph do [`frontend/index.html`](frontend/index.html), com URLs absolutas do site publicado (`og:url` e `og:image`, que aponta para [`frontend/og-image.jpg`](frontend/og-image.jpg)). Ajusta-as se publicares noutro endereço.
+
+### ⚙️ Página de configuração
+
+Disponível em `…/frontend/admin.html` (ex.: `https://teu-usuario.github.io/votebaby/frontend/admin.html`). Não tem link no site e não aparece em buscadores.
+
+1. No Render, cria as variáveis (ver [`.env.example`](backend/.env.example)):
+   - `ADMIN_PASSWORD`: senha da página (longa; 5 tentativas erradas bloqueiam o IP por 15 minutos). Sem ela, a página fica desativada.
+   - `RENDER_API_KEY`: em *Account Settings → API Keys*. **Atenção:** dá acesso à conta toda do Render; fica só no backend.
+   - `RENDER_SERVICE_ID`: id do serviço do backend (começa com `srv-`, aparece na URL do painel).
+2. Abre a página, entra com a senha e altera o que quiseres. Cada campo tem o controlo do seu tipo (opções, interruptor, seletor de cor, contador de caracteres), mostra o padrão e permite restaurá-lo; a pré-visualização acompanha as cores e os textos.
+3. Ao **Salvar**: o valor passa a valer na hora (as páginas abertas atualizam-se sozinhas) e o backend grava-o no Render e pede um deploy rápido, para continuar a valer depois de reinícios. Durante esse deploy (1–2 min) as páginas reconectam sozinhas.
+
+Ficam de fora da página, de propósito: `PG_*`, `NODE_ENV`, `PORT`, `FRONTEND_URL`, `ADMIN_PASSWORD` e `RENDER_*` — um valor errado nelas derrubaria o backend (e com ele a própria página). Sem `RENDER_API_KEY`/`RENDER_SERVICE_ID`, as alterações valem só até o próximo reinício (a página avisa).
 
 ---
 
