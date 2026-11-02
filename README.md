@@ -24,7 +24,7 @@ O **frontend** é estático (HTML, CSS, JavaScript). O **backend** é Node.js co
 | Camada | Tecnologias |
 |--------|-------------|
 | Frontend | HTML5, CSS3, JavaScript (sem bundler) |
-| Backend | Node.js, Express, `pg`, `ws`, `cors`, `dotenv`, `express-rate-limit`, `uuid`, `useragent` |
+| Backend | Node.js, Express, `pg`, `ws`, `cors`, `dotenv`, `express-rate-limit`, `uuid` |
 | Dados | PostgreSQL (ex.: Neon) |
 
 ---
@@ -121,30 +121,36 @@ sequenceDiagram
 .
 ├── frontend/
 │   ├── config.json             # Em producao: URL HTTPS do backend (configBase)
-│   ├── index.html
+│   ├── index.html              # Site dos convidados (e modo telão com ?telao=1)
+│   ├── admin.html              # Página de configuração (protegida por senha)
+│   ├── og-image.jpg            # Imagem da prévia do link (WhatsApp)
 │   ├── css/
-│   │   └── styles.css
+│   │   ├── styles.css
+│   │   └── admin.css
 │   └── js/
-│       └── scripts.js          # UI, API, WebSocket, modais, menu de contexto
+│       ├── scripts.js          # UI, API, WebSocket, revelação, telão
+│       └── admin.js            # Página de configuração
 ├── backend/
 │   ├── server.js               # Express, CORS, rate limit, trust proxy
 │   ├── db.js                   # Pool PostgreSQL
-│   ├── websocket.js            # Servidor WS e notificacoes apos votos e comentarios
+│   ├── websocket.js            # Servidor WS e notificacoes de votos, comentarios e configuracao
+│   ├── settings.js             # Parametros editaveis pela pagina de configuracao (tipo, padrao, validacao)
 │   ├── package.json
-│   ├── nodemon.json            # Watch para npm run dev
 │   ├── .env.example
 │   ├── database/
 │   │   └── schema.sql          # Tabelas votes e comments
 │   ├── routes/
-│   │   ├── index.js            # Monta /votes, /comments, /config
+│   │   ├── index.js            # Monta /votes, /comments, /config, /admin
 │   │   ├── votes.js
 │   │   ├── comments.js
-│   │   └── config.js           # JSON de configuracao do painel
+│   │   ├── config.js           # JSON de configuracao do painel
+│   │   └── admin.js            # /admin/settings (senha, aplicar e gravar no Render)
 │   ├── controllers/
 │   │   ├── votes.js
 │   │   └── comments.js
 │   └── utils/
-│       └── helpers.js
+│       ├── helpers.js
+│       └── render.js           # API do Render: grava variaveis e dispara deploy
 └── README.md
 ```
 
@@ -186,13 +192,7 @@ Edita o `.env`: credenciais PostgreSQL, `FRONTEND_URL` (origem permitida pelo CO
 | Comando | Uso |
 |---------|-----|
 | `npm start` | Executa `node server.js`. Usa em produção (Render, etc.). |
-| `npm run dev` | Desenvolvimento com **nodemon** (reinício ao alterares código em `routes`, `controllers`, `server.js`, `db.js` ou `.env`). |
-
-Equivalente manual:
-
-```bash
-npx nodemon server.js
-```
+| `npm run dev` | Desenvolvimento com o modo watch do próprio Node (`node --watch server.js`, Node 18.11+): reinicia ao alterares qualquer ficheiro `.js` carregado pelo servidor. Alterações no `.env` exigem reiniciar à mão. |
 
 ---
 
