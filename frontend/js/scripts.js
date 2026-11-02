@@ -411,6 +411,8 @@ function renderEmptyState(container, message) {
 }
 
 function updateUI(votes) {
+    document.querySelector('.vote-section').classList.remove('is-loading');
+
     const boyVotes = votes.filter(v => v.gender === 'boy').length;
     const girlVotes = votes.filter(v => v.gender === 'girl').length;
     const total = boyVotes + girlVotes;
@@ -521,35 +523,36 @@ function updateCommentUI(comments) {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+// No plano gratuito do Render o primeiro pedido acorda o servidor (pode levar ~1 min).
+const CONFIG_TIMEOUT_MS = 90000;
+
 async function loadConfig() {
-    await withLoading(async () => {
-        const response = await fetch(configUrl);
+    const response = await fetch(configUrl, { signal: AbortSignal.timeout(CONFIG_TIMEOUT_MS) });
 
-        if (!response.ok) {
-            throw new Error('Erro ao carregar configuração. Por favor, tente novamente mais tarde.');
-        }
+    if (!response.ok) {
+        throw new Error('Erro ao carregar configuração. Por favor, tente novamente mais tarde.');
+    }
 
-        const config = await response.json();
+    const config = await response.json();
 
-        apiUrl = config.apiUrl;
-        babyBoyName = config.babyBoyName;
-        babyGirlName = config.babyGirlName;
-        revealResult = config.revealResult;
-        enableAutoScroll = config.enableAutoScroll;
-        revealText = config.revealText;
-        boyColor = config.boyColor;
-        bgBoyColor = config.bgBoyColor;
-        girlColor = config.girlColor;
-        bgGirlColor = config.bgGirlColor;
-        balloonBoyColor = config.balloonBoyColor;
-        balloonGirlColor = config.balloonGirlColor;
-        revealBgBoyColor = config.revealBgBoyColor;
-        revealBgGirlColor = config.revealBgGirlColor;
+    apiUrl = config.apiUrl;
+    babyBoyName = config.babyBoyName;
+    babyGirlName = config.babyGirlName;
+    revealResult = config.revealResult;
+    enableAutoScroll = config.enableAutoScroll;
+    revealText = config.revealText;
+    boyColor = config.boyColor;
+    bgBoyColor = config.bgBoyColor;
+    girlColor = config.girlColor;
+    bgGirlColor = config.bgGirlColor;
+    balloonBoyColor = config.balloonBoyColor;
+    balloonGirlColor = config.balloonGirlColor;
+    revealBgBoyColor = config.revealBgBoyColor;
+    revealBgGirlColor = config.revealBgGirlColor;
 
-        webSocketUrl = apiUrlToWebSocketUrl(apiUrl);
+    webSocketUrl = apiUrlToWebSocketUrl(apiUrl);
 
-        updateRevealUI();
-    });
+    updateRevealUI();
 }
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
@@ -569,7 +572,7 @@ function setConnectionStatus(state) {
 
 /** Recarrega votos e comentários sem overlay (recupera eventos perdidos enquanto desconectado). */
 function refreshAll() {
-    return Promise.all([loadVotes({ silent: true }), loadComments({ silent: true })]);
+    return Promise.all([loadVotes(), loadComments()]);
 }
 
 /** Remove ou substitui o registo pelo id e devolve a lista reordenada. */
@@ -587,7 +590,7 @@ async function applyRealtimeEvent(event) {
     const isComment = event.resource === 'comments';
 
     if (!event.type || !event.data) {
-        await (isComment ? loadComments({ silent: true }) : loadVotes({ silent: true }));
+        await (isComment ? loadComments() : loadVotes());
         return;
     }
 
@@ -681,23 +684,14 @@ async function fetchVotesJson() {
     return response.json();
 }
 
-async function loadVotes(options = {}) {
-    const silent = options.silent === true;
-
-    if (silent) {
-        try {
-            votesState = await fetchVotesJson();
-            updateUI(votesState);
-        } catch (err) {
-            console.error('Erro ao atualizar votos:', err.message);
-        }
-        return;
-    }
-
-    await withLoading(async () => {
+/** Recarrega os votos sem overlay; falhas só vão para o console (a lista atual continua na tela). */
+async function loadVotes() {
+    try {
         votesState = await fetchVotesJson();
         updateUI(votesState);
-    });
+    } catch (err) {
+        console.error('Erro ao atualizar votos:', err.message);
+    }
 }
 
 async function submitVote(name, gender) {
@@ -715,7 +709,7 @@ async function submitVote(name, gender) {
         }
 
         // Não depende do WebSocket: se a ligação estiver em baixo, o voto aparece na mesma.
-        await loadVotes({ silent: true });
+        await loadVotes();
     });
 }
 
@@ -733,7 +727,7 @@ async function deleteVote(id) {
             throw new Error('Você não tem permissão para excluir este voto.');
         }
 
-        await loadVotes({ silent: true });
+        await loadVotes();
     });
     showToast('Voto excluído.', 'success');
 }
@@ -797,23 +791,14 @@ async function fetchCommentsJson() {
     return response.json();
 }
 
-async function loadComments(options = {}) {
-    const silent = options.silent === true;
-
-    if (silent) {
-        try {
-            commentsState = await fetchCommentsJson();
-            updateCommentUI(commentsState);
-        } catch (err) {
-            console.error('Erro ao atualizar comentários:', err.message);
-        }
-        return;
-    }
-
-    await withLoading(async () => {
+/** Recarrega os comentários sem overlay; falhas só vão para o console (a lista atual continua na tela). */
+async function loadComments() {
+    try {
         commentsState = await fetchCommentsJson();
         updateCommentUI(commentsState);
-    });
+    } catch (err) {
+        console.error('Erro ao atualizar comentários:', err.message);
+    }
 }
 
 async function deleteComment(id) {
@@ -828,7 +813,7 @@ async function deleteComment(id) {
             throw new Error('Você não tem permissão para excluir este comentário.');
         }
 
-        await loadComments({ silent: true });
+        await loadComments();
     });
     showToast('Comentário excluído.', 'success');
 }
@@ -845,7 +830,7 @@ async function patchComment(id, name, message) {
             throw new Error(await readErrorMessage(response, 'Erro ao atualizar comentário.'));
         }
 
-        await loadComments({ silent: true });
+        await loadComments();
     });
     showToast('Comentário atualizado.', 'success');
 }
@@ -874,7 +859,7 @@ async function submitComment(event) {
             throw new Error(await readErrorMessage(response, 'Erro ao enviar comentário. Por favor, tente novamente mais tarde.'));
         }
 
-        await loadComments({ silent: true });
+        await loadComments();
     });
 
     document.getElementById('comment-form').reset();
@@ -961,32 +946,75 @@ function startBalloonAndConfettiAnimation() {
     }, 500);
 }
 
+// ─── Tela de carregamento ─────────────────────────────────────────────────────
+
+// Mensagens exibidas enquanto o servidor não responde (tempo em ms desde a abertura).
+const SPLASH_HINTS = [
+    { after: 4000, text: 'Na primeira visita o servidor pode levar até um minuto para acordar. Obrigado pela paciência! ☕' },
+    { after: 25000, text: 'Quase lá… o servidor está terminando de acordar. 😴' },
+];
+let splashTimers = [];
+
+function startSplashHints() {
+    const hint = document.getElementById('splash-hint');
+    splashTimers = SPLASH_HINTS.map(({ after, text }) => setTimeout(() => {
+        hint.textContent = text;
+        hint.hidden = false;
+    }, after));
+}
+
+function hideSplash() {
+    splashTimers.forEach(clearTimeout);
+    document.getElementById('splash').classList.add('splash--hidden');
+}
+
+function showSplashError() {
+    splashTimers.forEach(clearTimeout);
+    const splash = document.getElementById('splash');
+    splash.classList.remove('splash--hidden');
+    splash.classList.add('splash--error');
+    document.getElementById('splash-title').textContent = 'Não foi possível carregar 😕';
+    const hint = document.getElementById('splash-hint');
+    hint.textContent = 'Verifique sua conexão com a internet e tente novamente.';
+    hint.hidden = false;
+    document.getElementById('splash-retry').hidden = false;
+}
+
 // ─── Inicialização ────────────────────────────────────────────────────────────
 
 async function initializeApp() {
+    startSplashHints();
     try {
         configUrl = await resolveConfigUrl();
         await loadConfig();
+        // Servidor acordado: o resto é rápido, então a página aparece com esqueletos nas listas.
+        hideSplash();
         initializeWebSocket();
-        await loadVotes();
-        await loadComments();
+
+        const [votes, comments] = await Promise.all([fetchVotesJson(), fetchCommentsJson()]);
+        votesState = votes;
+        updateUI(votesState);
+        commentsState = comments;
+        updateCommentUI(commentsState);
 
         if (revealResult !== 'pending' && enableAutoScroll) {
             startAutoScroll(2, 50);
         }
     } catch (error) {
         console.error('Erro na inicialização da aplicação:', error.message);
-        showToast('Erro ao inicializar a aplicação. Verifique sua conexão.', 'error', 8000);
+        showSplashError();
     }
 }
 
 setupContextMenuAndModals();
 
 document.getElementById('comment-form').addEventListener('submit', submitComment);
+document.getElementById('splash-retry').addEventListener('click', () => window.location.reload());
+
+// Não espera o window.onload (fontes e imagens): o pedido ao servidor começa o quanto antes.
+initializeApp();
 
 window.onload = () => {
-    initializeApp();
-
     const div = document.getElementById('revelacao');
     div.style.opacity = 0;
     let opacity = 0;

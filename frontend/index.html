@@ -29,6 +29,18 @@
     <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
+    <!-- Tela de carregamento: visível desde o primeiro instante; scripts.js esconde ao receber o /config -->
+    <div id="splash" class="splash" role="status" aria-live="polite">
+        <div class="splash-content">
+            <div class="splash-balloons" aria-hidden="true">
+                <span></span><span></span><span></span>
+            </div>
+            <p class="splash-title" id="splash-title">Preparando a festa… 🎈</p>
+            <p class="splash-hint" id="splash-hint" hidden></p>
+            <button type="button" class="splash-retry" id="splash-retry" hidden>Tentar novamente</button>
+        </div>
+    </div>
+
     <div class="balloon-container"></div>
 
     <main class="page">
@@ -37,7 +49,7 @@
         </div>
         <div id="revelacao" class="revelacao"></div>
 
-        <div class="vote-section">
+        <div class="vote-section is-loading">
             <h1>Chá Revelação</h1>
             <h2>Vote no sexo do bebê!</h2>
             <div class="input-container">
@@ -60,7 +72,13 @@
 
         <div class="log-container">
             <h3>🗳️ Histórico de votos</h3>
-            <div class="vote-log" id="log"></div>
+            <div class="vote-log" id="log">
+                <!-- Esqueletos até os votos chegarem (substituídos por updateUI) -->
+                <div class="skeleton skeleton--chip"></div>
+                <div class="skeleton skeleton--chip"></div>
+                <div class="skeleton skeleton--chip"></div>
+                <div class="skeleton skeleton--chip"></div>
+            </div>
         </div>
         <div class="comment-container">
             <h3>💬 Comentários</h3>
@@ -69,7 +87,11 @@
                 <textarea id="comment-message" placeholder="Digite seu comentário..." maxlength="500" required></textarea>
                 <button type="submit">Enviar</button>
             </form>
-            <div class="comment-log" id="comment-log"></div>
+            <div class="comment-log" id="comment-log">
+                <!-- Esqueletos até os comentários chegarem (substituídos por updateCommentUI) -->
+                <div class="skeleton skeleton--card"></div>
+                <div class="skeleton skeleton--card"></div>
+            </div>
         </div>
     </main>
 
