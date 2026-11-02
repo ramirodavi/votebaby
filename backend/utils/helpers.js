@@ -1,3 +1,5 @@
+const { getSetting } = require('../settings');
+
 // Manter em sincronia com frontend/index.html (atributos maxlength).
 const MAX_NAME_LENGTH = 100;
 const MAX_MESSAGE_LENGTH = 500;
@@ -28,8 +30,8 @@ function validateMessage(message) {
 
 /** Comentários novos: sempre antes da revelação; depois dela, só com ALLOW_COMMENTS_AFTER_REVEAL=true. */
 function commentsOpen() {
-    const revealed = (process.env.REVEAL_RESULT || 'pending') !== 'pending';
-    return !revealed || process.env.ALLOW_COMMENTS_AFTER_REVEAL === 'true';
+    const revealed = getSetting('REVEAL_RESULT') !== 'pending';
+    return !revealed || getSetting('ALLOW_COMMENTS_AFTER_REVEAL') === 'true';
 }
 
 /** Apenas tabelas com colunas id e browser_id (whitelist). Retorna a linha ou null. */

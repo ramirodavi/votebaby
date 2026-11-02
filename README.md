@@ -231,8 +231,10 @@ A prévia do link (WhatsApp e redes sociais) usa as tags Open Graph do [`fronten
 | `POST` | `/comments` | Novo comentário |
 | `PATCH` | `/comments/:id?browserId=` | Atualiza comentário próprio |
 | `DELETE` | `/comments/:id?browserId=` | Remove comentário próprio |
+| `GET` | `/admin/settings` | Parâmetros editáveis (tipo, padrão, valor atual). Requer `Authorization: Bearer <ADMIN_PASSWORD>` |
+| `PUT` | `/admin/settings` | Corpo: `{ values: { CHAVE: valor } }` — aplica na hora e grava no Render. Requer a mesma autorização |
 
-**WebSocket:** mesmo host/porta que a API; após alterações em votos ou comentários o cliente atualiza a lista correspondente.
+**WebSocket:** mesmo host/porta que a API; após alterações em votos ou comentários o servidor envia `{ resource, type, data }` com o registo alterado; após alterar a configuração envia `{ resource: 'config' }` e as páginas recarregam-na.
 
 ---
 

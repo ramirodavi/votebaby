@@ -1,4 +1,6 @@
 const express = require('express');
+const { getSetting } = require('../settings');
+
 const router = express.Router();
 
 function forwardedFirst(value) {
@@ -20,20 +22,20 @@ function publicApiUrl(req) {
 router.get('/', (req, res) => {
     res.json({
         apiUrl: publicApiUrl(req),
-        babyBoyName: process.env.BABY_BOY_NAME || 'Menino',
-        babyGirlName: process.env.BABY_GIRL_NAME || 'Menina',
-        revealResult: process.env.REVEAL_RESULT || 'pending',
-        revealText: process.env.REVEAL_TEXT || '',
-        boyColor: process.env.BOY_COLOR || 'rgb(58, 177, 98)',
-        bgBoyColor: process.env.BG_BOY_COLOR || 'rgb(172, 241, 197)',
-        girlColor: process.env.GIRL_COLOR || 'rgb(219, 130, 207)',
-        bgGirlColor: process.env.BG_GIRL_COLOR || 'rgb(231, 179, 223)',
-        balloonBoyColor: process.env.BALLOON_BOY_COLOR || 'rgb(58, 177, 98)',
-        balloonGirlColor: process.env.BALLOON_GIRL_COLOR || 'rgb(219, 130, 207)',
-        revealBgBoyColor: process.env.REVEAL_BG_BOY_COLOR || 'rgb(172, 241, 197)',
-        revealBgGirlColor: process.env.REVEAL_BG_GIRL_COLOR || 'rgb(231, 179, 223)',
-        enableAutoScroll: process.env.ENABLE_AUTO_SCROLL === 'true',
-        allowCommentsAfterReveal: process.env.ALLOW_COMMENTS_AFTER_REVEAL === 'true'
+        babyBoyName: getSetting('BABY_BOY_NAME'),
+        babyGirlName: getSetting('BABY_GIRL_NAME'),
+        revealResult: getSetting('REVEAL_RESULT'),
+        revealText: getSetting('REVEAL_TEXT'),
+        boyColor: getSetting('BOY_COLOR'),
+        bgBoyColor: getSetting('BG_BOY_COLOR'),
+        girlColor: getSetting('GIRL_COLOR'),
+        bgGirlColor: getSetting('BG_GIRL_COLOR'),
+        balloonBoyColor: getSetting('BALLOON_BOY_COLOR'),
+        balloonGirlColor: getSetting('BALLOON_GIRL_COLOR'),
+        revealBgBoyColor: getSetting('REVEAL_BG_BOY_COLOR'),
+        revealBgGirlColor: getSetting('REVEAL_BG_GIRL_COLOR'),
+        enableAutoScroll: getSetting('ENABLE_AUTO_SCROLL') === 'true',
+        allowCommentsAfterReveal: getSetting('ALLOW_COMMENTS_AFTER_REVEAL') === 'true'
     });
 });
 
