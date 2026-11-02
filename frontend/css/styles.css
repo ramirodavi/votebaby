@@ -484,17 +484,37 @@ textarea {
     background: var(--girl-strong);
 }
 
+/* Mural de comentários: avatar + (autor · horário relativo) + mensagem */
 .comment-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
     background: var(--surface-solid);
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
     overflow-wrap: anywhere;
 }
 
+.comment-entry--new {
+    animation: fade-up 0.4s ease-out;
+}
+
+.comment-body {
+    flex: 1;
+    min-width: 0;
+}
+
 .comment-entry p {
-    margin: var(--space-1) 0;
+    margin: var(--space-1) 0 0;
     white-space: pre-line;
+}
+
+.avatar--comment {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8rem;
+    background: var(--accent-gradient);
 }
 
 .entry--mine {
@@ -529,22 +549,26 @@ textarea {
 
 .comment-entry-head {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-2);
+    align-items: baseline;
+    flex-wrap: wrap;
+    column-gap: var(--space-2);
 }
 
 .comment-entry .author {
-    display: block;
     font-weight: 800;
-    flex: 1;
     min-width: 0;
 }
 
 .comment-entry .timestamp {
-    display: block;
     font-size: 0.8rem;
+    font-weight: 600;
     color: var(--text-muted);
+}
+
+/* ⋮ sempre no canto direito do cabeçalho */
+.comment-entry-head .entry-actions-btn {
+    align-self: flex-start;
+    margin: -6px -8px -6px auto;
 }
 
 .boy-text {
@@ -1103,7 +1127,8 @@ textarea {
     .vote-section.is-loading .team-count,
     .vote-section.is-loading .team-pct,
     .vote-section.is-loading .progress-container,
-    .vote-chip--new {
+    .vote-chip--new,
+    .comment-entry--new {
         animation: none;
     }
 }

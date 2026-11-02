@@ -424,9 +424,13 @@ function updateRevealUI() {
         revealDiv.style.display = 'block';
         voteSection.style.display = 'block';
         commentSection.style.display = 'block';
-        commentForm.style.display = 'none';
+        // Depois da revelação é quando os convidados querem parabenizar: o formulário continua aberto.
+        commentForm.style.display = 'block';
         commentLog.style.display = 'block';
         balloonContainer.style.display = 'block';
+
+        document.getElementById('comment-title').textContent = '💌 Deixe um recado para o bebê';
+        document.getElementById('comment-message').placeholder = 'Escreva seu recado para o bebê e os papais...';
 
         voteSection.querySelector('h2').style.display = 'none';
         voteSection.querySelector('.input-container').style.display = 'none';
@@ -610,6 +614,31 @@ function updateUI(votes) {
     renderedVotes = new Map(votes.map(v => [v.id, v.gender]));
 }
 
+const relativeTimeFormat = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' });
+
+/** "agora mesmo", "há 5 minutos", "há 2 horas", "ontem"; depois de uma semana, a data. */
+function formatRelativeTime(date) {
+    const seconds = Math.round((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return 'agora mesmo';
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return relativeTimeFormat.format(-minutes, 'minute');
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return relativeTimeFormat.format(-hours, 'hour');
+    const days = Math.round(hours / 24);
+    if (days < 7) return relativeTimeFormat.format(-days, 'day');
+    return date.toLocaleDateString('pt-BR');
+}
+
+/** Atualiza os horários relativos já exibidos (chamado a cada minuto). */
+function refreshCommentTimes() {
+    document.querySelectorAll('#comment-log time[datetime]').forEach((el) => {
+        el.textContent = formatRelativeTime(new Date(el.dateTime));
+    });
+}
+
+// Comentários já exibidos: só os novos ganham animação de entrada.
+let renderedCommentIds = null;
+
 function updateCommentUI(comments) {
     const commentLog = document.getElementById('comment-log');
     commentLog.innerHTML = '';
@@ -617,42 +646,56 @@ function updateCommentUI(comments) {
     if (comments.length === 0) {
         renderEmptyState(commentLog, revealResult === 'pending'
             ? 'Nenhum recado ainda. Deixe o primeiro! 💬'
-            : 'Nenhum comentário.');
+            : 'Nenhum recado ainda. Deixe o primeiro! 💌');
     }
 
     comments.forEach(comment => {
-        const entry = document.createElement('div');
+        const entry = document.createElement('article');
         entry.classList.add('comment-entry');
+        if (renderedCommentIds && !renderedCommentIds.has(comment.id)) {
+            entry.classList.add('comment-entry--new');
+        }
+
+        const avatar = document.createElement('span');
+        avatar.className = 'avatar avatar--comment';
+        avatar.setAttribute('aria-hidden', 'true');
+        avatar.textContent = initials(comment.name);
+
+        const body = document.createElement('div');
+        body.className = 'comment-body';
+
+        const head = document.createElement('div');
+        head.className = 'comment-entry-head';
 
         const authorSpan = document.createElement('span');
         authorSpan.textContent = comment.name;
         authorSpan.classList.add('author');
 
-        const messageP = document.createElement('p');
-        messageP.textContent = comment.message;
+        const createdAt = new Date(comment.created_at);
+        const time = document.createElement('time');
+        time.className = 'timestamp';
+        time.dateTime = createdAt.toISOString();
+        time.title = createdAt.toLocaleString('pt-BR');
+        time.textContent = formatRelativeTime(createdAt);
 
-        const timestampSpan = document.createElement('span');
-        timestampSpan.textContent = new Date(comment.created_at).toLocaleString();
-        timestampSpan.classList.add('timestamp');
+        head.append(authorSpan, time);
 
         if (isBrowserOwner(comment.browser_id)) {
             entry.classList.add('entry--mine');
-            const head = document.createElement('div');
-            head.className = 'comment-entry-head';
-            head.appendChild(authorSpan);
-            const btn = createEntryActionsButton((anchor) => {
+            head.appendChild(createEntryActionsButton((anchor) => {
                 toggleActionsMenu(anchor, { type: 'comment', vote: null, comment });
-            });
-            head.appendChild(btn);
-            entry.appendChild(head);
-        } else {
-            entry.appendChild(authorSpan);
+            }));
         }
-        entry.appendChild(messageP);
-        entry.appendChild(timestampSpan);
 
+        const messageP = document.createElement('p');
+        messageP.textContent = comment.message;
+
+        body.append(head, messageP);
+        entry.append(avatar, body);
         commentLog.appendChild(entry);
     });
+
+    renderedCommentIds = new Set(comments.map(c => c.id));
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -1177,6 +1220,7 @@ document.getElementById('vote-girl').addEventListener('click', () => vote('girl'
 document.getElementById('name-input').addEventListener('input', updateMyVoteUI);
 document.getElementById('comment-form').addEventListener('submit', submitComment);
 fillGuestName(localStorage.getItem(GUEST_NAME_KEY));
+setInterval(refreshCommentTimes, 60 * 1000);
 document.getElementById('splash-retry').addEventListener('click', () => window.location.reload());
 
 // Não espera o window.onload (fontes e imagens): o pedido ao servidor começa o quanto antes.
