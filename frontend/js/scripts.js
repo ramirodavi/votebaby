@@ -213,7 +213,6 @@ let balloonGirlColor = 'rgb(219, 130, 207)';
 let revealBgBoyColor = 'rgb(172, 241, 197)';
 let revealBgGirlColor = 'rgb(231, 179, 223)';
 
-let enableAutoScroll = false;
 let allowCommentsAfterReveal = false;
 
 /** Comentários novos: sempre antes da revelação; depois, só com ALLOW_COMMENTS_AFTER_REVEAL=true. */
@@ -792,7 +791,6 @@ async function loadConfig() {
     babyBoyName = config.babyBoyName;
     babyGirlName = config.babyGirlName;
     revealResult = config.revealResult;
-    enableAutoScroll = config.enableAutoScroll;
     allowCommentsAfterReveal = config.allowCommentsAfterReveal === true;
     revealText = config.revealText;
     boyColor = config.boyColor;
@@ -1175,44 +1173,6 @@ async function submitComment(event) {
     showToast('Comentário enviado! 💬', 'success');
 }
 
-// ─── Scroll automático ────────────────────────────────────────────────────────
-
-function startAutoScroll(speed, interval) {
-    let scrollPosition = 0;
-    const maxScrollHeight = () => document.documentElement.scrollHeight - window.innerHeight;
-    let scrollingDown = true;
-
-    function scrollPage() {
-        const maxHeight = maxScrollHeight();
-
-        if (scrollingDown) {
-            if (scrollPosition < maxHeight) {
-                scrollPosition += speed;
-                window.scrollTo(0, scrollPosition);
-                setTimeout(scrollPage, interval);
-            } else {
-                setTimeout(() => {
-                    scrollingDown = false;
-                    scrollPage();
-                }, 3000);
-            }
-        } else {
-            if (scrollPosition > 0) {
-                scrollPosition -= speed;
-                window.scrollTo(0, scrollPosition);
-                setTimeout(scrollPage, interval);
-            } else {
-                setTimeout(() => {
-                    scrollingDown = true;
-                    scrollPage();
-                }, 3000);
-            }
-        }
-    }
-
-    scrollPage();
-}
-
 // ─── Animação de balões e confetes ────────────────────────────────────────────
 
 let balloonTimer = null;
@@ -1501,11 +1461,6 @@ async function initializeApp() {
 
         // Com os dados já na tela, por trás da sequência ("quem acertou" pronto ao terminar).
         await maybePlayRevealShow();
-
-        // No telão quem rola são as listas (startTelao), não a página.
-        if (revealResult !== 'pending' && enableAutoScroll && !isTelao) {
-            startAutoScroll(2, 50);
-        }
     } catch (error) {
         console.error('Erro na inicialização da aplicação:', error.message);
         showSplashError();

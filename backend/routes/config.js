@@ -34,7 +34,6 @@ router.get('/', (req, res) => {
         balloonGirlColor: getSetting('BALLOON_GIRL_COLOR'),
         revealBgBoyColor: getSetting('REVEAL_BG_BOY_COLOR'),
         revealBgGirlColor: getSetting('REVEAL_BG_GIRL_COLOR'),
-        enableAutoScroll: getSetting('ENABLE_AUTO_SCROLL') === 'true',
         allowCommentsAfterReveal: getSetting('ALLOW_COMMENTS_AFTER_REVEAL') === 'true'
     });
 });

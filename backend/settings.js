@@ -16,7 +16,6 @@ const SETTINGS = [
     { key: 'BALLOON_GIRL_COLOR', type: 'color', default: 'rgb(219, 130, 207)' },
     { key: 'REVEAL_BG_BOY_COLOR', type: 'color', default: 'rgb(172, 241, 197)' },
     { key: 'REVEAL_BG_GIRL_COLOR', type: 'color', default: 'rgb(231, 179, 223)' },
-    { key: 'ENABLE_AUTO_SCROLL', type: 'boolean', default: 'false' },
 ];
 
 const SETTINGS_BY_KEY = new Map(SETTINGS.map(s => [s.key, s]));

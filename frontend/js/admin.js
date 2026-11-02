@@ -39,10 +39,6 @@ const FIELD_INFO = {
     BG_GIRL_COLOR: { section: 'colors-girl', label: 'Fundo da página', help: 'Lado de cima/esquerda do degradê e barra do navegador no celular.' },
     BALLOON_GIRL_COLOR: { section: 'colors-girl', label: 'Balões', help: 'Balões que sobem depois de revelar "menina".' },
     REVEAL_BG_GIRL_COLOR: { section: 'colors-girl', label: 'Faixa da revelação', help: 'Fundo de "É uma menina!" e da tela da contagem.' },
-    ENABLE_AUTO_SCROLL: {
-        section: 'page', label: 'Rolagem automática depois da revelação',
-        help: 'A página sobe e desce sozinha (útil numa tela sem o modo telão). No telão as listas já rolam sozinhas.',
-    },
 };
 
 const REVEAL_OPTIONS = {
@@ -327,7 +323,7 @@ function refreshField(key) {
 }
 
 function renderSettings() {
-    ['reveal', 'names', 'colors-boy', 'colors-girl', 'page'].forEach((section) => {
+    ['reveal', 'names', 'colors-boy', 'colors-girl'].forEach((section) => {
         document.getElementById(`section-${section}`).replaceChildren();
     });
     settings.forEach((setting) => {
