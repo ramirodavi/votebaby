@@ -55,4 +55,12 @@ function notifyClients(data) {
     });
 }
 
-module.exports = { setupWebSocket, notifyClients };
+/**
+ * Evento de alteração com o registo completo, para o frontend aplicar sem novo GET.
+ * Formato: { resource: 'votes' | 'comments', type: 'created' | 'updated' | 'deleted', data: linha }.
+ */
+function notifyChange(resource, type, data) {
+    notifyClients({ resource, type, data });
+}
+
+module.exports = { setupWebSocket, notifyClients, notifyChange };

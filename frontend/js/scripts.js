@@ -110,6 +110,10 @@ let revealBgGirlColor = 'rgb(231, 179, 223)';
 
 let enableAutoScroll = false;
 
+// Listas atuais, na mesma ordem do backend (votos por id crescente, comentários decrescente).
+let votesState = [];
+let commentsState = [];
+
 const MINE_HINT = 'Alterar ou excluir este item';
 let contextAction = { type: null, vote: null, comment: null };
 let menuAnchorButton = null;
@@ -484,6 +488,34 @@ function refreshAll() {
     return Promise.all([loadVotes({ silent: true }), loadComments({ silent: true })]);
 }
 
+/** Remove ou substitui o registo pelo id e devolve a lista reordenada. */
+function applyChange(list, { type, data }, compare) {
+    const rest = list.filter(item => item.id !== data.id);
+    if (type === 'deleted') return rest;
+    return [...rest, data].sort(compare);
+}
+
+/**
+ * Aplica no estado local o evento { resource, type, data } enviado pelo backend.
+ * Eventos sem dados (formato antigo do backend) recarregam a lista correspondente.
+ */
+async function applyRealtimeEvent(event) {
+    const isComment = event.resource === 'comments';
+
+    if (!event.type || !event.data) {
+        await (isComment ? loadComments({ silent: true }) : loadVotes({ silent: true }));
+        return;
+    }
+
+    if (isComment) {
+        commentsState = applyChange(commentsState, event, (a, b) => b.id - a.id);
+        updateCommentUI(commentsState);
+    } else {
+        votesState = applyChange(votesState, event, (a, b) => a.id - b.id);
+        updateUI(votesState);
+    }
+}
+
 function initializeWebSocket() {
     let reconnectDelay = 1000;
     let reconnectTimer = null;
@@ -504,11 +536,7 @@ function initializeWebSocket() {
             try {
                 const data = JSON.parse(event.data);
                 console.log('Mensagem recebida via WebSocket:', data);
-                if (data.resource === 'comments') {
-                    await loadComments({ silent: true });
-                } else {
-                    await loadVotes({ silent: true });
-                }
+                await applyRealtimeEvent(data);
             } catch (err) {
                 console.error('Erro ao processar mensagem do WebSocket:', err.message);
             }
@@ -561,8 +589,8 @@ async function loadVotes(options = {}) {
 
     if (silent) {
         try {
-            const votes = await fetchVotesJson();
-            updateUI(votes);
+            votesState = await fetchVotesJson();
+            updateUI(votesState);
         } catch (err) {
             console.error('Erro ao atualizar votos:', err.message);
         }
@@ -570,8 +598,8 @@ async function loadVotes(options = {}) {
     }
 
     await withLoading(async () => {
-        const votes = await fetchVotesJson();
-        updateUI(votes);
+        votesState = await fetchVotesJson();
+        updateUI(votesState);
     });
 }
 
@@ -674,8 +702,8 @@ async function loadComments(options = {}) {
 
     if (silent) {
         try {
-            const comments = await fetchCommentsJson();
-            updateCommentUI(comments);
+            commentsState = await fetchCommentsJson();
+            updateCommentUI(commentsState);
         } catch (err) {
             console.error('Erro ao atualizar comentários:', err.message);
         }
@@ -683,8 +711,8 @@ async function loadComments(options = {}) {
     }
 
     await withLoading(async () => {
-        const comments = await fetchCommentsJson();
-        updateCommentUI(comments);
+        commentsState = await fetchCommentsJson();
+        updateCommentUI(commentsState);
     });
 }
 

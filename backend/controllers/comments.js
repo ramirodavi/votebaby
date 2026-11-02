@@ -1,5 +1,5 @@
 const pool = require('../db');
-const { notifyClients } = require('../websocket');
+const { notifyChange } = require('../websocket');
 const { formatName, validateName, validateMessage, selectRowOwnedByBrowser } = require('../utils/helpers');
 
 const DUPLICATE_COMMENT_ERROR = 'Já existe um comentário idêntico para este nome.';
@@ -28,11 +28,11 @@ async function addComment(req, res) {
     const formattedName = formatName(name);
 
     try {
-        await pool.query(
-            'INSERT INTO comments (name, message, browser_id) VALUES ($1, $2, $3)',
+        const result = await pool.query(
+            'INSERT INTO comments (name, message, browser_id) VALUES ($1, $2, $3) RETURNING *',
             [formattedName, message.trim(), browserId]
         );
-        notifyClients({ resource: 'comments' });
+        notifyChange('comments', 'created', result.rows[0]);
         res.status(201).json({ message: 'Comentário adicionado com sucesso!' });
     } catch (err) {
         if (err.code === '23505') {
@@ -58,7 +58,7 @@ async function deleteComment(req, res) {
         }
 
         await pool.query('DELETE FROM comments WHERE id = $1', [id]);
-        notifyClients({ resource: 'comments' });
+        notifyChange('comments', 'deleted', row);
         res.json({ message: 'Comentário removido com sucesso!' });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao excluir comentário.' });
@@ -92,11 +92,11 @@ async function updateComment(req, res) {
             return res.status(403).json({ error: 'Você não tem permissão para alterar este comentário.' });
         }
 
-        await pool.query(
-            'UPDATE comments SET name = $1, message = $2 WHERE id = $3',
+        const result = await pool.query(
+            'UPDATE comments SET name = $1, message = $2 WHERE id = $3 RETURNING *',
             [formattedName, message.trim(), id]
         );
-        notifyClients({ resource: 'comments' });
+        notifyChange('comments', 'updated', result.rows[0]);
         res.json({ message: 'Comentário atualizado com sucesso!' });
     } catch (err) {
         if (err.code === '23505') {

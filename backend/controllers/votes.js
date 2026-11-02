@@ -1,5 +1,5 @@
 const pool = require('../db');
-const { notifyClients } = require('../websocket');
+const { notifyChange } = require('../websocket');
 const { formatName, validateName, selectRowOwnedByBrowser } = require('../utils/helpers');
 
 async function getVotes(req, res) {
@@ -36,18 +36,19 @@ async function addOrUpdateVote(req, res) {
         );
 
         if (existingVote.rows.length > 0) {
-            await pool.query(
-                'UPDATE votes SET gender = $1 WHERE name = $2 AND browser_id = $3',
+            const result = await pool.query(
+                'UPDATE votes SET gender = $1 WHERE name = $2 AND browser_id = $3 RETURNING *',
                 [gender, formattedName, browserId]
             );
+            result.rows.forEach(row => notifyChange('votes', 'updated', row));
         } else {
-            await pool.query(
-                'INSERT INTO votes (name, gender, browser_id) VALUES ($1, $2, $3)',
+            const result = await pool.query(
+                'INSERT INTO votes (name, gender, browser_id) VALUES ($1, $2, $3) RETURNING *',
                 [formattedName, gender, browserId]
             );
+            notifyChange('votes', 'created', result.rows[0]);
         }
 
-        notifyClients({ action: 'update', name: formattedName, gender });
         res.status(201).json({ message: 'Voto registrado com sucesso!' });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao registrar voto.' });
@@ -70,7 +71,7 @@ async function deleteVote(req, res) {
         }
 
         await pool.query('DELETE FROM votes WHERE id = $1', [id]);
-        notifyClients({ action: 'delete', id });
+        notifyChange('votes', 'deleted', row);
         res.json({ message: 'Voto removido com sucesso!' });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao excluir voto.' });
