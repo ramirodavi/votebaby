@@ -635,8 +635,6 @@ function updateUI(votes) {
     });
     document.getElementById('boy-count').textContent = boyVotes;
     document.getElementById('girl-count').textContent = girlVotes;
-    document.getElementById('boy-pct').textContent = `${boyPct}%`;
-    document.getElementById('girl-pct').textContent = `${girlPct}%`;
     document.getElementById('score-status').textContent = scoreStatus(boyVotes, girlVotes);
     document.getElementById('progress').setAttribute('aria-label', total
         ? `${babyBoyName}: ${boyPct}%, ${babyGirlName}: ${girlPct}%`

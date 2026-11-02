@@ -315,12 +315,6 @@ textarea {
     font-variant-numeric: tabular-nums;
 }
 
-.team-pct {
-    font-weight: 700;
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
-}
-
 .versus {
     font-size: 1.4rem;
     font-weight: 800;
@@ -1222,7 +1216,6 @@ textarea {
 
 .skeleton,
 .vote-section.is-loading .team-count,
-.vote-section.is-loading .team-pct,
 .vote-section.is-loading .progress-container {
     background: linear-gradient(90deg, var(--skeleton) 25%, var(--surface-soft) 50%, var(--skeleton) 75%);
     background-size: 200% 100%;
@@ -1242,7 +1235,6 @@ textarea {
 }
 
 .vote-section.is-loading .team-count,
-.vote-section.is-loading .team-pct,
 .vote-section.is-loading .score-status {
     min-width: 2.4em;
     border-radius: var(--radius-sm);
@@ -1441,7 +1433,6 @@ html.telao {
     font-size: 1.1rem;
 }
 
-.telao .team-pct,
 .telao .score-status {
     font-size: 1.2rem;
 }
