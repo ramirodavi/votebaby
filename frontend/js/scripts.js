@@ -585,9 +585,7 @@ function teamColumnTitle(gender) {
 function renderTeamColumn(gender, votes) {
     const column = document.createElement('div');
     column.className = `team-column team-column--${gender}`;
-    if (revealResult !== 'pending') {
-        column.classList.add(gender === revealResult ? 'team-column--winner' : 'team-column--loser');
-    }
+    column.classList.toggle('team-column--winner', gender === revealResult);
 
     const title = document.createElement('h4');
     const label = document.createElement('span');
@@ -666,7 +664,6 @@ function updateUI(votes) {
     ['boy', 'girl'].forEach((gender) => {
         const team = document.querySelector(`.team--${gender}`);
         team.classList.toggle('team--winner', revealResult === gender);
-        team.classList.toggle('team--loser', revealResult !== 'pending' && revealResult !== gender);
     });
 
     updateMyVoteUI();

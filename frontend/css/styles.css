@@ -644,8 +644,9 @@ textarea {
 
 /* ─── Quem acertou (após a revelação) ─────────────────────────────────────── */
 
+/* O vencedor ganha destaque; o outro time continua na cor normal (sem esmaecer). */
 .team {
-    transition: opacity 0.3s, transform 0.3s;
+    transition: transform 0.3s;
 }
 
 .team--winner {
@@ -656,17 +657,9 @@ textarea {
     content: '👑 ';
 }
 
-.team--loser {
-    opacity: 0.55;
-}
-
 .team-column--winner {
     box-shadow: inset 0 0 0 2px var(--text-muted);
     background: var(--surface-solid);
-}
-
-.team-column--loser {
-    opacity: 0.75;
 }
 
 .my-vote--hit {
