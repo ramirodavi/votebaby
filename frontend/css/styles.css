@@ -18,7 +18,7 @@
     --skeleton: #e9e2ee;
     --border: rgba(61, 53, 71, 0.12);
     --focus-ring: rgba(61, 53, 71, 0.25);
-    --accent-gradient: linear-gradient(90deg, var(--girl-color), var(--boy-color));
+    --accent-gradient: linear-gradient(90deg, var(--girl-strong), var(--boy-strong));
     --success: #2ecc71;
     --danger: #e0565b;
 
@@ -39,6 +39,21 @@
     --space-6: 32px;
 
     --tap-size: 48px;
+
+    /* Variações das cores do tema para contraste (sem color-mix ficam iguais à cor original). */
+    --boy-strong: var(--boy-color);   /* fundo com texto branco (botões, barra) */
+    --girl-strong: var(--girl-color);
+    --boy-ink: var(--boy-color);      /* texto sobre fundo branco */
+    --girl-ink: var(--girl-color);
+}
+
+@supports (color: color-mix(in srgb, red, blue)) {
+    :root {
+        --boy-strong: color-mix(in srgb, var(--boy-color) 85%, black);
+        --girl-strong: color-mix(in srgb, var(--girl-color) 85%, black);
+        --boy-ink: color-mix(in srgb, var(--boy-color) 70%, black);
+        --girl-ink: color-mix(in srgb, var(--girl-color) 70%, black);
+    }
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */
@@ -205,11 +220,11 @@ textarea {
 }
 
 .boy-btn {
-    background: var(--boy-color);
+    background: var(--boy-strong);
 }
 
 .girl-btn {
-    background: var(--girl-color);
+    background: var(--girl-strong);
 }
 
 .boy-btn:hover,
@@ -222,6 +237,39 @@ textarea {
 .boy-btn:active,
 .girl-btn:active {
     transform: translateY(0) scale(0.98);
+}
+
+/* Voto atual da pessoa (nome digitado): anel em volta e ✓; o outro botão fica mais discreto. */
+.boy-btn.is-selected,
+.girl-btn.is-selected {
+    box-shadow: 0 0 0 3px var(--surface-solid), 0 0 0 6px var(--text-muted);
+}
+
+.boy-btn.is-selected::before,
+.girl-btn.is-selected::before {
+    content: '✓ ';
+}
+
+.buttons:has(.is-selected) button:not(.is-selected) {
+    opacity: 0.7;
+}
+
+.vote-form .buttons {
+    margin-bottom: var(--space-4);
+}
+
+.my-vote {
+    margin: 0 0 var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--surface-soft);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.my-vote strong {
+    font-weight: 800;
 }
 
 .vote-count {
@@ -244,12 +292,12 @@ textarea {
 
 .boy-name {
     justify-content: flex-end;
-    color: var(--boy-color);
+    color: var(--boy-ink);
 }
 
 .girl-name {
     justify-content: flex-start;
-    color: var(--girl-color);
+    color: var(--girl-ink);
 }
 
 .boy-name span,
@@ -285,11 +333,11 @@ textarea {
 }
 
 .boy-bar {
-    background: var(--boy-color);
+    background: var(--boy-strong);
 }
 
 .girl-bar {
-    background: var(--girl-color);
+    background: var(--girl-strong);
 }
 
 /* ─── Listas (histórico e comentários) ────────────────────────────────────── */
@@ -396,11 +444,11 @@ textarea {
 }
 
 .boy-text {
-    color: var(--boy-color);
+    color: var(--boy-ink);
 }
 
 .girl-text {
-    color: var(--girl-color);
+    color: var(--girl-ink);
 }
 
 /* ─── Formulário de comentários ───────────────────────────────────────────── */

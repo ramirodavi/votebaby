@@ -52,19 +52,24 @@
         <div class="vote-section is-loading">
             <h1>Chá Revelação</h1>
             <h2>Vote no sexo do bebê!</h2>
-            <div class="input-container">
-                <input type="text" id="name-input" placeholder="Digite seu nome antes de votar..." maxlength="100">
-            </div>
-            <div class="buttons">
-                <button class="boy-btn" onclick="vote('boy')">Menino</button>
-                <button class="girl-btn" onclick="vote('girl')">Menina</button>
-            </div>
-            <div class="vote-count">
+            <!-- Enter no nome não vota (falta escolher o time): leva o foco para os botões -->
+            <form id="vote-form" class="vote-form">
+                <div class="input-container">
+                    <input type="text" id="name-input" placeholder="Digite seu nome antes de votar..." maxlength="100"
+                        aria-label="Seu nome" autocomplete="name" enterkeyhint="done">
+                </div>
+                <div class="buttons">
+                    <button type="button" class="boy-btn" id="vote-boy" aria-pressed="false">Menino</button>
+                    <button type="button" class="girl-btn" id="vote-girl" aria-pressed="false">Menina</button>
+                </div>
+                <p id="my-vote" class="my-vote" role="status" hidden></p>
+            </form>
+            <div class="vote-count" aria-live="polite" aria-atomic="true">
                 <div class="boy-name"><strong>Menino:</strong> <span id="boy-count">0</span></div>
-                <div class="name-separator"><strong>|</strong></div>
+                <div class="name-separator" aria-hidden="true"><strong>|</strong></div>
                 <div class="girl-name"><strong>Menina:</strong> <span id="girl-count">0</span></div>
             </div>
-            <div class="progress-container">
+            <div class="progress-container" id="progress" role="img" aria-label="Nenhum voto ainda">
                 <div id="boy-bar" class="progress-bar boy-bar">0%</div>
                 <div id="girl-bar" class="progress-bar girl-bar">0%</div>
             </div>
@@ -83,8 +88,10 @@
         <div class="comment-container">
             <h3>💬 Comentários</h3>
             <form id="comment-form" class="comment-form">
-                <input type="text" id="comment-name" placeholder="Seu nome" maxlength="100" required>
-                <textarea id="comment-message" placeholder="Digite seu comentário..." maxlength="500" required></textarea>
+                <input type="text" id="comment-name" placeholder="Seu nome" maxlength="100" required
+                    aria-label="Seu nome" autocomplete="name">
+                <textarea id="comment-message" placeholder="Digite seu comentário..." maxlength="500" required
+                    aria-label="Comentário"></textarea>
                 <button type="submit">Enviar</button>
             </form>
             <div class="comment-log" id="comment-log">
@@ -101,7 +108,7 @@
     </div>
 
     <div id="modal-edit-vote" class="modal-overlay" hidden>
-        <div class="modal-dialog" role="dialog" aria-labelledby="modal-edit-vote-title">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-edit-vote-title">
             <h3 id="modal-edit-vote-title">Alterar voto</h3>
             <p class="modal-hint">Escolha o novo voto:</p>
             <div class="buttons modal-buttons">
@@ -113,17 +120,17 @@
     </div>
 
     <div id="modal-edit-comment" class="modal-overlay" hidden>
-        <div class="modal-dialog" role="dialog" aria-labelledby="modal-edit-comment-title">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-edit-comment-title">
             <h3 id="modal-edit-comment-title">Editar comentário</h3>
-            <input type="text" id="modal-comment-name" placeholder="Seu nome" autocomplete="name" maxlength="100">
-            <textarea id="modal-comment-message" placeholder="Digite seu comentário..." maxlength="500"></textarea>
+            <input type="text" id="modal-comment-name" placeholder="Seu nome" autocomplete="name" maxlength="100" aria-label="Seu nome">
+            <textarea id="modal-comment-message" placeholder="Digite seu comentário..." maxlength="500" aria-label="Comentário"></textarea>
             <button type="button" class="modal-primary-btn" id="modal-comment-save">Atualizar</button>
             <button type="button" class="modal-cancel-btn" id="modal-comment-cancel">Cancelar</button>
         </div>
     </div>
 
     <div id="modal-confirm" class="modal-overlay" hidden>
-        <div class="modal-dialog" role="alertdialog" aria-labelledby="modal-confirm-title" aria-describedby="modal-confirm-message">
+        <div class="modal-dialog" role="alertdialog" aria-modal="true" aria-labelledby="modal-confirm-title" aria-describedby="modal-confirm-message">
             <h3 id="modal-confirm-title">Tem certeza?</h3>
             <p class="modal-hint" id="modal-confirm-message"></p>
             <button type="button" class="modal-danger-btn" id="modal-confirm-ok">Excluir</button>

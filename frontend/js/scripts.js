@@ -118,13 +118,12 @@ function confirmDialog(message, confirmLabel = 'Excluir') {
     closeConfirmDialog(false);
     document.getElementById('modal-confirm-message').textContent = message;
     document.getElementById('modal-confirm-ok').textContent = confirmLabel;
-    document.getElementById('modal-confirm').hidden = false;
-    document.getElementById('modal-confirm-cancel').focus();
+    openModal(document.getElementById('modal-confirm'), document.getElementById('modal-confirm-cancel'));
     return new Promise(resolve => { resolveConfirm = resolve; });
 }
 
 function closeConfirmDialog(result) {
-    document.getElementById('modal-confirm').hidden = true;
+    closeModal(document.getElementById('modal-confirm'));
     if (resolveConfirm) {
         resolveConfirm(result);
         resolveConfirm = null;
@@ -137,6 +136,58 @@ let browserId = localStorage.getItem('browserId');
 if (!browserId) {
     browserId = crypto.randomUUID();
     localStorage.setItem('browserId', browserId);
+}
+
+// Nome do convidado: preenchido automaticamente no voto e no comentário nas próximas visitas.
+const GUEST_NAME_KEY = 'guestName';
+
+function saveGuestName(name) {
+    localStorage.setItem(GUEST_NAME_KEY, formatName(name));
+}
+
+/** Preenche os campos de nome vazios (voto e comentário). */
+function fillGuestName(name) {
+    if (!name) return;
+    ['name-input', 'comment-name'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (!input.value.trim()) input.value = name;
+    });
+}
+
+// ─── Modais: foco ─────────────────────────────────────────────────────────────
+
+/** Abre o modal, foca `focusEl` (ou o primeiro controlo) e guarda para onde devolver o foco ao fechar. */
+function openModal(modal, focusEl) {
+    modal.returnFocusTo = document.activeElement;
+    modal.hidden = false;
+    (focusEl || modal.querySelector('input, textarea, button')).focus();
+}
+
+function closeModal(modal) {
+    if (modal.hidden) return;
+    modal.hidden = true;
+    const target = modal.returnFocusTo;
+    modal.returnFocusTo = null;
+    if (target && target.isConnected) target.focus();
+}
+
+/** Tab e Shift+Tab circulam só dentro do modal aberto. */
+function trapFocusInOpenModal(e) {
+    const modal = document.querySelector('.modal-overlay:not([hidden])');
+    if (e.key !== 'Tab' || !modal) return;
+    const focusables = [...modal.querySelectorAll('button, input, textarea')];
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (!modal.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+    } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+    }
 }
 
 // ─── Configurações padrão ─────────────────────────────────────────────────────
@@ -232,14 +283,12 @@ function createEntryActionsButton(onActivate) {
 }
 
 function closeVoteEditModal() {
-    const el = document.getElementById('modal-edit-vote');
-    if (el) el.hidden = true;
+    closeModal(document.getElementById('modal-edit-vote'));
     pendingVoteForEdit = null;
 }
 
 function closeCommentEditModal() {
-    const el = document.getElementById('modal-edit-comment');
-    if (el) el.hidden = true;
+    closeModal(document.getElementById('modal-edit-comment'));
     pendingCommentForEdit = null;
 }
 
@@ -254,18 +303,20 @@ function setupContextMenuAndModals() {
             const vote = contextAction.vote;
             const comment = contextAction.comment;
             const type = contextAction.type;
+            // O foco volta ao botão ⋮ (e não ao item do menu, que fica oculto) ao fechar o modal.
+            menuAnchorButton?.focus();
 
             if (action === 'edit') {
                 if (type === 'vote' && vote) {
                     pendingVoteForEdit = vote;
                     hideContextMenu();
-                    document.getElementById('modal-edit-vote').hidden = false;
+                    openModal(document.getElementById('modal-edit-vote'));
                 } else if (type === 'comment' && comment) {
                     pendingCommentForEdit = comment;
                     hideContextMenu();
                     document.getElementById('modal-comment-name').value = comment.name;
                     document.getElementById('modal-comment-message').value = comment.message;
-                    document.getElementById('modal-edit-comment').hidden = false;
+                    openModal(document.getElementById('modal-edit-comment'));
                 }
                 return;
             }
@@ -290,6 +341,7 @@ function setupContextMenuAndModals() {
             closeCommentEditModal();
             closeConfirmDialog(false);
         }
+        trapFocusInOpenModal(e);
     });
 
     document.getElementById('modal-confirm-ok').addEventListener('click', () => closeConfirmDialog(true));
@@ -298,21 +350,19 @@ function setupContextMenuAndModals() {
         if (e.target.id === 'modal-confirm') closeConfirmDialog(false);
     });
 
-    document.getElementById('modal-vote-boy').addEventListener('click', async () => {
+    const changeVoteFromModal = async (gender) => {
         if (!pendingVoteForEdit) return;
         const v = pendingVoteForEdit;
         closeVoteEditModal();
-        await submitVote(v.name, 'boy');
-        showToast(`Voto alterado para ${genderLabel('boy')}.`, 'boy');
-    });
-
-    document.getElementById('modal-vote-girl').addEventListener('click', async () => {
-        if (!pendingVoteForEdit) return;
-        const v = pendingVoteForEdit;
-        closeVoteEditModal();
-        await submitVote(v.name, 'girl');
-        showToast(`Voto alterado para ${genderLabel('girl')}.`, 'girl');
-    });
+        if (v.gender === gender) {
+            showToast(`${v.name} já votou em ${genderLabel(gender)}. 😉`, gender);
+            return;
+        }
+        await submitVote(v.name, gender);
+        showToast(`Voto alterado para ${genderLabel(gender)}.`, gender);
+    };
+    document.getElementById('modal-vote-boy').addEventListener('click', () => changeVoteFromModal('boy'));
+    document.getElementById('modal-vote-girl').addEventListener('click', () => changeVoteFromModal('girl'));
 
     document.getElementById('modal-vote-cancel').addEventListener('click', closeVoteEditModal);
 
@@ -395,11 +445,46 @@ function updateRevealUI() {
 
     document.querySelector('.boy-name strong').textContent = `${babyBoyName}:`;
     document.querySelector('.girl-name strong').textContent = `${babyGirlName}:`;
+    ['vote-boy', 'modal-vote-boy'].forEach(id => { document.getElementById(id).textContent = babyBoyName; });
+    ['vote-girl', 'modal-vote-girl'].forEach(id => { document.getElementById(id).textContent = babyGirlName; });
 }
 
-// Rótulo de cada opção de voto no histórico e nos avisos.
+// Rótulo de cada opção de voto (nomes configurados em BABY_BOY_NAME / BABY_GIRL_NAME).
 function genderLabel(gender) {
-    return gender === 'boy' ? 'Menino' : 'Menina';
+    return gender === 'boy' ? babyBoyName : babyGirlName;
+}
+
+/** Voto deste navegador com o nome indicado (votar de novo com o mesmo nome altera esse voto). */
+function findMyVote(name) {
+    const formatted = formatName(name || '');
+    if (!formatted) return null;
+    return votesState.find(v => isBrowserOwner(v.browser_id) && v.name === formatted) || null;
+}
+
+/** Destaca o botão do voto atual e mostra "Fulano, você votou em X" para o nome digitado. */
+function updateMyVoteUI() {
+    const mine = revealResult === 'pending'
+        ? findMyVote(document.getElementById('name-input').value)
+        : null;
+
+    ['boy', 'girl'].forEach((gender) => {
+        const btn = document.getElementById(`vote-${gender}`);
+        const selected = mine?.gender === gender;
+        btn.classList.toggle('is-selected', selected);
+        btn.setAttribute('aria-pressed', String(selected));
+    });
+
+    const status = document.getElementById('my-vote');
+    status.hidden = !mine;
+    if (!mine) return;
+
+    const choice = document.createElement('strong');
+    choice.className = mine.gender === 'boy' ? 'boy-text' : 'girl-text';
+    choice.textContent = genderLabel(mine.gender);
+    status.replaceChildren(
+        `${mine.name}, você votou em `, choice,
+        '. Toque no outro botão se quiser mudar.'
+    );
 }
 
 /** Mensagem exibida no lugar de uma lista vazia. */
@@ -430,6 +515,11 @@ function updateUI(votes) {
 
     document.getElementById('boy-count').textContent = boyVotes;
     document.getElementById('girl-count').textContent = girlVotes;
+    document.getElementById('progress').setAttribute('aria-label', total
+        ? `${babyBoyName}: ${boyPct}%, ${babyGirlName}: ${girlPct}%`
+        : 'Nenhum voto ainda');
+
+    updateMyVoteUI();
 
     const log = document.getElementById('log');
     log.innerHTML = '';
@@ -742,10 +832,34 @@ async function vote(gender) {
         return;
     }
 
+    const previous = findMyVote(name);
+    if (previous?.gender === gender) {
+        showToast(`Você já votou em ${genderLabel(gender)}! 😉`, gender);
+        return;
+    }
+
     await submitVote(name, gender);
-    nameInput.value = '';
+    // O nome fica no campo (formatado como no voto, e salvo) para mostrar o voto atual e facilitar o comentário.
+    nameInput.value = formatName(name);
+    saveGuestName(name);
+    fillGuestName(nameInput.value);
     triggerCelebration(gender);
-    showToast(`Voto em ${genderLabel(gender)} registrado! 🎉`, gender);
+    showToast(previous
+        ? `Voto alterado para ${genderLabel(gender)}.`
+        : `Voto em ${genderLabel(gender)} registrado! 🎉`, gender);
+}
+
+/** Enter no nome: ainda falta escolher o time, então o foco vai para os botões. */
+function handleVoteFormSubmit(event) {
+    event.preventDefault();
+    const nameInput = document.getElementById('name-input');
+    if (!nameInput.value.trim()) {
+        showToast('Por favor, digite seu nome antes de votar!', 'error');
+        return;
+    }
+    const mine = findMyVote(nameInput.value);
+    document.getElementById(mine?.gender === 'girl' ? 'vote-girl' : 'vote-boy').focus();
+    if (!mine) showToast(`Agora escolha: ${babyBoyName} ou ${babyGirlName}? 👇`);
 }
 
 function triggerCelebration(gender) {
@@ -863,6 +977,8 @@ async function submitComment(event) {
     });
 
     document.getElementById('comment-form').reset();
+    saveGuestName(formattedName);
+    fillGuestName(formattedName);
     showToast('Comentário enviado! 💬', 'success');
 }
 
@@ -993,6 +1109,9 @@ async function initializeApp() {
 
         const [votes, comments] = await Promise.all([fetchVotesJson(), fetchCommentsJson()]);
         votesState = votes;
+        // Quem votou antes de existir o nome salvo: usa o nome do seu único voto.
+        const myVotes = votesState.filter(v => isBrowserOwner(v.browser_id));
+        if (myVotes.length === 1) fillGuestName(myVotes[0].name);
         updateUI(votesState);
         commentsState = comments;
         updateCommentUI(commentsState);
@@ -1008,7 +1127,12 @@ async function initializeApp() {
 
 setupContextMenuAndModals();
 
+document.getElementById('vote-form').addEventListener('submit', handleVoteFormSubmit);
+document.getElementById('vote-boy').addEventListener('click', () => vote('boy').catch(() => {}));
+document.getElementById('vote-girl').addEventListener('click', () => vote('girl').catch(() => {}));
+document.getElementById('name-input').addEventListener('input', updateMyVoteUI);
 document.getElementById('comment-form').addEventListener('submit', submitComment);
+fillGuestName(localStorage.getItem(GUEST_NAME_KEY));
 document.getElementById('splash-retry').addEventListener('click', () => window.location.reload());
 
 // Não espera o window.onload (fontes e imagens): o pedido ao servidor começa o quanto antes.
