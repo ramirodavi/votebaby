@@ -15,16 +15,21 @@ const corsOptions = {
     origin: process.env.FRONTEND_URL || 'http://localhost:5500',
 };
 
-const postLimiter = rateLimit({
+// Só limita escritas: leituras são disparadas em todos os clientes a cada evento do WebSocket
+// e, na festa, os convidados costumam partilhar o mesmo IP (Wi-Fi do local).
+const WRITE_METHODS = ['POST', 'PATCH', 'DELETE'];
+
+const writeLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 30,
+    max: 120,
+    skip: (req) => !WRITE_METHODS.includes(req.method),
     message: { error: 'Muitas requisições. Tente novamente em um minuto.' },
 });
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use('/votes', postLimiter);
-app.use('/comments', postLimiter);
+app.use('/votes', writeLimiter);
+app.use('/comments', writeLimiter);
 app.use(routes);
 
 setupWebSocket(server);

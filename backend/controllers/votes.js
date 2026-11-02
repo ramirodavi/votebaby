@@ -1,6 +1,6 @@
 const pool = require('../db');
 const { notifyClients } = require('../websocket');
-const { formatName, selectRowOwnedByBrowser } = require('../utils/helpers');
+const { formatName, validateName, selectRowOwnedByBrowser } = require('../utils/helpers');
 
 async function getVotes(req, res) {
     try {
@@ -20,6 +20,11 @@ async function addOrUpdateVote(req, res) {
 
     if (!['boy', 'girl'].includes(gender)) {
         return res.status(400).json({ error: 'Gênero inválido. Use "boy" ou "girl".' });
+    }
+
+    const nameError = validateName(name);
+    if (nameError) {
+        return res.status(400).json({ error: nameError });
     }
 
     const formattedName = formatName(name);

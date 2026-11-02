@@ -34,10 +34,19 @@ function apiUrlToWebSocketUrl(apiUrlString) {
 
 // Manter em sincronia com backend/utils/helpers.js (formatName).
 function formatName(name) {
-    return name.trim().split(' ')
+    return name.trim().split(/\s+/)
         .slice(0, 2)
         .map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase())
         .join(' ');
+}
+
+/** Mensagem de erro devolvida pelo backend ({ error }) ou o texto padrão. */
+async function readErrorMessage(response, fallback) {
+    try {
+        const body = await response.json();
+        if (body.error) return body.error;
+    } catch (_) { /* ignore */ }
+    return fallback;
 }
 
 function showLoading() {
@@ -540,9 +549,7 @@ async function submitVote(name, gender) {
         });
 
         if (!response.ok) {
-            const errorMessage = await response.text();
-            console.error('Erro ao registrar voto:', errorMessage);
-            throw new Error('Erro ao registrar voto. Por favor, tente novamente.');
+            throw new Error(await readErrorMessage(response, 'Erro ao registrar voto. Por favor, tente novamente.'));
         }
     });
 }
@@ -664,12 +671,7 @@ async function patchComment(id, name, message) {
         });
 
         if (!response.ok) {
-            let msg = 'Erro ao atualizar comentário.';
-            try {
-                const j = await response.json();
-                if (j.error) msg = j.error;
-            } catch (_) { /* ignore */ }
-            throw new Error(msg);
+            throw new Error(await readErrorMessage(response, 'Erro ao atualizar comentário.'));
         }
 
         await loadComments();
@@ -697,7 +699,7 @@ async function submitComment(event) {
         });
 
         if (!response.ok) {
-            throw new Error('Erro ao enviar comentário. Por favor, tente novamente mais tarde.');
+            throw new Error(await readErrorMessage(response, 'Erro ao enviar comentário. Por favor, tente novamente mais tarde.'));
         }
 
         await loadComments();

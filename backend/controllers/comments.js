@@ -1,6 +1,8 @@
 const pool = require('../db');
 const { notifyClients } = require('../websocket');
-const { formatName, selectRowOwnedByBrowser } = require('../utils/helpers');
+const { formatName, validateName, validateMessage, selectRowOwnedByBrowser } = require('../utils/helpers');
+
+const DUPLICATE_COMMENT_ERROR = 'Já existe um comentário idêntico para este nome.';
 
 async function getComments(req, res) {
     try {
@@ -18,16 +20,24 @@ async function addComment(req, res) {
         return res.status(400).json({ error: 'Nome e mensagem são obrigatórios.' });
     }
 
+    const validationError = validateName(name) || validateMessage(message);
+    if (validationError) {
+        return res.status(400).json({ error: validationError });
+    }
+
     const formattedName = formatName(name);
 
     try {
         await pool.query(
             'INSERT INTO comments (name, message, browser_id) VALUES ($1, $2, $3)',
-            [formattedName, message, browserId]
+            [formattedName, message.trim(), browserId]
         );
         notifyClients({ resource: 'comments' });
         res.status(201).json({ message: 'Comentário adicionado com sucesso!' });
     } catch (err) {
+        if (err.code === '23505') {
+            return res.status(409).json({ error: DUPLICATE_COMMENT_ERROR });
+        }
         res.status(500).json({ error: 'Erro ao adicionar comentário.' });
     }
 }
@@ -68,6 +78,11 @@ async function updateComment(req, res) {
         return res.status(400).json({ error: 'Nome e mensagem são obrigatórios.' });
     }
 
+    const validationError = validateName(name) || validateMessage(message);
+    if (validationError) {
+        return res.status(400).json({ error: validationError });
+    }
+
     const formattedName = formatName(name);
 
     try {
@@ -79,13 +94,13 @@ async function updateComment(req, res) {
 
         await pool.query(
             'UPDATE comments SET name = $1, message = $2 WHERE id = $3',
-            [formattedName, message, id]
+            [formattedName, message.trim(), id]
         );
         notifyClients({ resource: 'comments' });
         res.json({ message: 'Comentário atualizado com sucesso!' });
     } catch (err) {
         if (err.code === '23505') {
-            return res.status(409).json({ error: 'Já existe um comentário idêntico para este nome.' });
+            return res.status(409).json({ error: DUPLICATE_COMMENT_ERROR });
         }
         res.status(500).json({ error: 'Erro ao atualizar comentário.' });
     }
