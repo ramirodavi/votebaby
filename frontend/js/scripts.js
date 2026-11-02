@@ -130,6 +130,12 @@ function closeConfirmDialog(result) {
     }
 }
 
+// ─── Modo telão ───────────────────────────────────────────────────────────────
+
+// ?telao=1: layout para TV/projetor (detalhes em startTelao). A classe entra já, antes de qualquer pintura dos dados.
+const isTelao = new URLSearchParams(window.location.search).has('telao');
+if (isTelao) document.documentElement.classList.add('telao');
+
 // ─── Identificador do navegador ───────────────────────────────────────────────
 
 let browserId = localStorage.getItem('browserId');
@@ -1273,11 +1279,113 @@ function playRevealShow() {
     });
 }
 
-/** Na primeira visita após a revelação (por navegador e resultado), toca a sequência. */
+/**
+ * Na primeira visita após a revelação (por navegador e resultado), toca a sequência.
+ * No telão toca sempre: basta recarregar a página no momento da revelação.
+ */
 async function maybePlayRevealShow() {
-    if (revealResult === 'pending' || localStorage.getItem(REVEAL_SEEN_KEY) === revealResult) return;
+    if (revealResult === 'pending') return;
+    if (isTelao) {
+        await playRevealShow();
+        return;
+    }
+    if (localStorage.getItem(REVEAL_SEEN_KEY) === revealResult) return;
     await playRevealShow();
     localStorage.setItem(REVEAL_SEEN_KEY, revealResult);
+}
+
+// ─── Modo telão (?telao=1) ────────────────────────────────────────────────────
+
+// Biblioteca carregada só no telão; o hash (SRI) garante que o arquivo da CDN não foi alterado.
+const QR_LIB_URL = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+const QR_LIB_SRI = 'sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==';
+
+function loadScript(src, integrity) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.integrity = integrity;
+        script.crossOrigin = 'anonymous';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Não foi possível carregar ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
+/** Endereço que os convidados abrem no celular: o desta página, sem o ?telao. */
+function guestUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('telao');
+    url.hash = '';
+    return url.toString();
+}
+
+async function renderQrCode() {
+    const url = guestUrl();
+    document.getElementById('qr-title').textContent = revealResult === 'pending'
+        ? 'Vote pelo celular! 📱'
+        : 'Deixe seu recado pelo celular! 💌';
+    document.getElementById('qr-url').textContent = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    document.getElementById('qr-card').hidden = false;
+
+    try {
+        await loadScript(QR_LIB_URL, QR_LIB_SRI);
+        const qr = qrcode(0, 'M');
+        qr.addData(url);
+        qr.make();
+        document.getElementById('qr-code').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+    } catch (err) {
+        // Sem a biblioteca o cartão continua útil com o endereço escrito.
+        console.error('Erro ao gerar o QR Code:', err.message);
+        document.getElementById('qr-code').hidden = true;
+    }
+}
+
+/** Rolagem contínua de uma lista; no fim pausa e volta ao topo. */
+function startListAutoScroll(list) {
+    if (prefersReducedMotion()) return;
+    const SPEED_PX_PER_FRAME = 0.5;
+    let position = 0;
+    let pausedUntil = performance.now() + 3000;
+
+    function step(now) {
+        const max = list.scrollHeight - list.clientHeight;
+        if (max <= 0) {
+            position = 0;
+        } else if (now >= pausedUntil) {
+            if (position >= max) {
+                position = 0;
+                list.scrollTop = 0;
+                pausedUntil = now + 4000;
+            } else {
+                position = Math.min(position + SPEED_PX_PER_FRAME, max);
+                list.scrollTop = position;
+                if (position >= max) pausedUntil = now + 3000;
+            }
+        }
+        requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+/** Impede que a tela do computador/TV apague durante a festa (quando o navegador suporta). */
+async function keepScreenOn() {
+    try {
+        await navigator.wakeLock?.request('screen');
+    } catch (err) {
+        console.warn('Wake Lock indisponível:', err.message);
+    }
+}
+
+function startTelao() {
+    renderQrCode();
+    startListAutoScroll(document.getElementById('log'));
+    startListAutoScroll(document.getElementById('comment-log'));
+    keepScreenOn();
+    // O navegador libera o bloqueio quando a aba fica oculta: pede de novo ao voltar.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') keepScreenOn();
+    });
 }
 
 // ─── Tela de carregamento ─────────────────────────────────────────────────────
@@ -1334,10 +1442,13 @@ async function initializeApp() {
         commentsState = comments;
         updateCommentUI(commentsState);
 
+        if (isTelao) startTelao();
+
         // Com os dados já na tela, por trás da sequência ("quem acertou" pronto ao terminar).
         await maybePlayRevealShow();
 
-        if (revealResult !== 'pending' && enableAutoScroll) {
+        // No telão quem rola são as listas (startTelao), não a página.
+        if (revealResult !== 'pending' && enableAutoScroll && !isTelao) {
             startAutoScroll(2, 50);
         }
     } catch (error) {

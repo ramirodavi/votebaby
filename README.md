@@ -8,10 +8,11 @@ O **frontend** é estático (HTML, CSS, JavaScript). O **backend** é Node.js co
 
 ## ✨ Funcionalidades
 
-- 🗳️ **Votação** com percentagens e histórico; cada pessoa pode **alterar** o voto (modal) ou **apagar** (menu de contexto) apenas o próprio registo.
-- 💬 **Comentários** com data/hora; o autor pode **editar** ou **apagar** só os próprios.
-- ⚡ **Tempo real** para votos e comentários: o servidor notifica os clientes ligados por WebSocket após alterações.
-- 🎀 **Modo revelação**: com resultado `pending` mostra votação e formulário de comentários; após revelar (`boy` / `girl`), ajusta layout, animações (🎈 balões, 🎊 confetes) e textos vindos da configuração.
+- 🗳️ **Votação** com placar por time, percentagens e histórico em duas colunas; o nome fica guardado e a página mostra em quem votaste; cada pessoa pode **alterar** o voto (modal) ou **apagar** (menu de contexto) apenas o próprio registo.
+- 💬 **Comentários** em mural com horário relativo ("há 5 minutos"); o autor pode **editar** ou **apagar** só os próprios.
+- ⚡ **Tempo real** para votos e comentários: o servidor envia por WebSocket o registo alterado e as páginas atualizam-se (com aviso "Fulano votou em…").
+- 🎀 **Modo revelação**: com resultado `pending` mostra a votação; após revelar (`boy` / `girl`), a primeira visita de cada convidado mostra uma contagem 3‑2‑1 com a cor do resultado e confetes, e a página passa a mostrar **quem acertou** (os recados continuam abertos).
+- 📺 **Modo telão**: abre o site com `?telao=1` (ex.: `https://teu-usuario.github.io/votebaby/frontend/?telao=1`) num computador ligado à TV/projetor. Mostra placar, votos e recados numa só tela, com rolagem automática, **QR Code** para os convidados abrirem a página e a sequência da revelação sempre que a página é aberta (recarrega-a no momento da revelação).
 - 🔑 **Identificação no navegador**: `browserId` em `localStorage` para permitir editar/apagar só o que é teu, sem contas.
 - 🛡️ **CORS** limitado à origem configurada; **rate limiting** nas rotas de escrita de votos e comentários.
 

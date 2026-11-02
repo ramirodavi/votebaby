@@ -72,7 +72,7 @@ html {
 body {
     margin: 0;
     font-family: var(--font-body);
-    font-size: 16px;
+    font-size: 1rem;
     line-height: 1.5;
     color: var(--text);
     text-align: center;
@@ -1316,4 +1316,178 @@ textarea {
     .revelacao {
         padding: var(--space-6) var(--space-5);
     }
+}
+
+/* ─── Cartão do QR Code (só no telão) ─────────────────────────────────────── */
+
+.qr-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: auto;
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--surface-solid);
+    box-shadow: var(--shadow-sm);
+    text-align: left;
+}
+
+.qr-card[hidden],
+.qr-code[hidden] {
+    display: none;
+}
+
+.qr-code {
+    flex-shrink: 0;
+    width: 9rem;
+    height: 9rem;
+}
+
+.qr-code svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.qr-title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.qr-url {
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+/* ─── Modo telão (?telao=1) ───────────────────────────────────────────────── */
+
+/* Tudo em rem cresce com a largura da tela */
+html.telao {
+    font-size: clamp(16px, 1.1vw, 28px);
+}
+
+.telao body {
+    overflow: hidden;
+}
+
+/* Uma tela só, sem rolagem da página: revelação em cima e três colunas (placar | votos | recados) */
+.telao .page {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+        "reveal reveal reveal"
+        "vote log comments";
+    gap: var(--space-4);
+    max-width: none;
+    height: 100vh;
+    padding: var(--space-4) var(--space-5);
+}
+
+.telao .topbar {
+    position: fixed;
+    top: var(--space-3);
+    right: var(--space-4);
+    margin: 0;
+}
+
+.telao .revelacao {
+    grid-area: reveal;
+    margin: 0;
+    padding: var(--space-4);
+}
+
+/* !important: updateRevealUI define display inline nestes blocos */
+.telao .vote-section,
+.telao .log-container,
+.telao .comment-container {
+    display: flex !important;
+    flex-direction: column;
+    min-height: 0;
+    margin: 0;
+    padding: var(--space-5);
+    overflow: hidden;
+}
+
+.telao .vote-section {
+    grid-area: vote;
+}
+
+.telao .log-container {
+    grid-area: log;
+}
+
+.telao .comment-container {
+    grid-area: comments;
+}
+
+/* Sem formulários nem ações: o telão só exibe */
+.telao .vote-form,
+.telao .vote-section h2,
+.telao .comment-form,
+.telao .entry-actions-btn,
+.telao .reveal-show-skip {
+    display: none !important;
+}
+
+.telao .team-count {
+    font-size: 5rem;
+}
+
+.telao .team-label {
+    font-size: 1.1rem;
+}
+
+.telao .team-pct,
+.telao .score-status {
+    font-size: 1.2rem;
+}
+
+.telao .progress-container {
+    height: 2.4rem;
+}
+
+.telao .progress-bar {
+    line-height: 2.4rem;
+    font-size: 1.2rem;
+}
+
+.telao .qr-card {
+    margin-top: auto;
+}
+
+/* Listas preenchem a coluna e rolam sozinhas (startListAutoScroll), sem barra de rolagem */
+.telao .vote-log,
+.telao .comment-log {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.telao .vote-log::-webkit-scrollbar,
+.telao .comment-log::-webkit-scrollbar {
+    display: none;
+}
+
+.telao .vote-chip {
+    font-size: 1.05rem;
+}
+
+.telao .avatar {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.8rem;
+}
+
+.telao .avatar--comment {
+    width: 2.4rem;
+    height: 2.4rem;
+}
+
+.telao .toast-container {
+    width: min(32rem, calc(100% - 2 * var(--space-4)));
 }
