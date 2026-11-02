@@ -75,11 +75,59 @@ async function withLoading(operation) {
         await operation();
     } catch (err) {
         console.error('Erro durante operação:', err.message);
-        alert(err.message);
+        showToast(err.message, 'error');
         throw err;
     } finally {
         clearTimeout(loadingTimeout);
         hideLoading();
+    }
+}
+
+// ─── Avisos (toasts) e confirmação ────────────────────────────────────────────
+
+const MAX_TOASTS = 3;
+
+/** variant: 'info' | 'success' | 'error' | 'boy' | 'girl' (cor da faixa lateral). */
+function showToast(message, variant = 'info', duration = 3500) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    while (container.children.length >= MAX_TOASTS) {
+        container.firstElementChild.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast--${variant}`;
+    toast.setAttribute('role', variant === 'error' ? 'alert' : 'status');
+    toast.textContent = message;
+
+    const dismiss = () => {
+        toast.classList.add('toast--leaving');
+        setTimeout(() => toast.remove(), 200);
+    };
+    toast.addEventListener('click', dismiss);
+    setTimeout(dismiss, duration);
+
+    container.appendChild(toast);
+}
+
+let resolveConfirm = null;
+
+/** Modal de confirmação no estilo da página. Resolve true (confirmou) ou false. */
+function confirmDialog(message, confirmLabel = 'Excluir') {
+    closeConfirmDialog(false);
+    document.getElementById('modal-confirm-message').textContent = message;
+    document.getElementById('modal-confirm-ok').textContent = confirmLabel;
+    document.getElementById('modal-confirm').hidden = false;
+    document.getElementById('modal-confirm-cancel').focus();
+    return new Promise(resolve => { resolveConfirm = resolve; });
+}
+
+function closeConfirmDialog(result) {
+    document.getElementById('modal-confirm').hidden = true;
+    if (resolveConfirm) {
+        resolveConfirm(result);
+        resolveConfirm = null;
     }
 }
 
@@ -240,7 +288,14 @@ function setupContextMenuAndModals() {
             hideContextMenu();
             closeVoteEditModal();
             closeCommentEditModal();
+            closeConfirmDialog(false);
         }
+    });
+
+    document.getElementById('modal-confirm-ok').addEventListener('click', () => closeConfirmDialog(true));
+    document.getElementById('modal-confirm-cancel').addEventListener('click', () => closeConfirmDialog(false));
+    document.getElementById('modal-confirm').addEventListener('click', (e) => {
+        if (e.target.id === 'modal-confirm') closeConfirmDialog(false);
     });
 
     document.getElementById('modal-vote-boy').addEventListener('click', async () => {
@@ -248,6 +303,7 @@ function setupContextMenuAndModals() {
         const v = pendingVoteForEdit;
         closeVoteEditModal();
         await submitVote(v.name, 'boy');
+        showToast(`Voto alterado para ${genderLabel('boy')}.`, 'boy');
     });
 
     document.getElementById('modal-vote-girl').addEventListener('click', async () => {
@@ -255,6 +311,7 @@ function setupContextMenuAndModals() {
         const v = pendingVoteForEdit;
         closeVoteEditModal();
         await submitVote(v.name, 'girl');
+        showToast(`Voto alterado para ${genderLabel('girl')}.`, 'girl');
     });
 
     document.getElementById('modal-vote-cancel').addEventListener('click', closeVoteEditModal);
@@ -268,7 +325,7 @@ function setupContextMenuAndModals() {
         const name = document.getElementById('modal-comment-name').value.trim();
         const message = document.getElementById('modal-comment-message').value.trim();
         if (!name || !message) {
-            alert('Por favor, preencha todos os campos.');
+            showToast('Por favor, preencha todos os campos.', 'error');
             return;
         }
         const id = pendingCommentForEdit.id;
@@ -340,6 +397,19 @@ function updateRevealUI() {
     document.querySelector('.girl-name strong').textContent = `${babyGirlName}:`;
 }
 
+// Rótulo de cada opção de voto no histórico e nos avisos.
+function genderLabel(gender) {
+    return gender === 'boy' ? 'Menino' : 'Menina';
+}
+
+/** Mensagem exibida no lugar de uma lista vazia. */
+function renderEmptyState(container, message) {
+    const p = document.createElement('p');
+    p.className = 'empty-state';
+    p.textContent = message;
+    container.appendChild(p);
+}
+
 function updateUI(votes) {
     const boyVotes = votes.filter(v => v.gender === 'boy').length;
     const girlVotes = votes.filter(v => v.gender === 'girl').length;
@@ -362,6 +432,12 @@ function updateUI(votes) {
     const log = document.getElementById('log');
     log.innerHTML = '';
 
+    if (votes.length === 0) {
+        renderEmptyState(log, revealResult === 'pending'
+            ? 'Ninguém votou ainda. Seja o primeiro! 🗳️'
+            : 'Nenhum voto registrado.');
+    }
+
     votes.forEach(vote => {
         const entry = document.createElement('div');
         entry.classList.add('vote-entry');
@@ -374,7 +450,7 @@ function updateUI(votes) {
         textSpan.textContent = ' votou em ';
 
         const genderSpan = document.createElement('span');
-        genderSpan.textContent = vote.gender === 'boy' ? 'Menino' : 'Menina';
+        genderSpan.textContent = genderLabel(vote.gender);
         genderSpan.classList.add('bold', vote.gender === 'boy' ? 'boy-text' : 'girl-text');
 
         if (isBrowserOwner(vote.browser_id)) {
@@ -401,6 +477,12 @@ function updateUI(votes) {
 function updateCommentUI(comments) {
     const commentLog = document.getElementById('comment-log');
     commentLog.innerHTML = '';
+
+    if (comments.length === 0) {
+        renderEmptyState(commentLog, revealResult === 'pending'
+            ? 'Nenhum recado ainda. Deixe o primeiro! 💬'
+            : 'Nenhum comentário.');
+    }
 
     comments.forEach(comment => {
         const entry = document.createElement('div');
@@ -513,8 +595,21 @@ async function applyRealtimeEvent(event) {
         commentsState = applyChange(commentsState, event, (a, b) => b.id - a.id);
         updateCommentUI(commentsState);
     } else {
+        const previous = votesState.find(v => v.id === event.data.id);
         votesState = applyChange(votesState, event, (a, b) => a.id - b.id);
         updateUI(votesState);
+        announceVote(event, previous);
+    }
+}
+
+/** Aviso "ao vivo" para votos de outras pessoas (os próprios já têm a celebração). */
+function announceVote({ type, data }, previous) {
+    if (isBrowserOwner(data.browser_id)) return;
+    const label = genderLabel(data.gender);
+    if (type === 'created') {
+        showToast(`🎈 ${data.name} votou em ${label}!`, data.gender);
+    } else if (type === 'updated' && previous && previous.gender !== data.gender) {
+        showToast(`🔄 ${data.name} mudou o voto para ${label}!`, data.gender);
     }
 }
 
@@ -625,7 +720,7 @@ async function submitVote(name, gender) {
 }
 
 async function deleteVote(id) {
-    if (!confirm('Você realmente deseja excluir este voto?')) return;
+    if (!await confirmDialog('Você realmente deseja excluir este voto?')) return;
 
     await withLoading(async () => {
         const response = await fetch(`${apiUrl}/votes/${id}?browserId=${browserId}`, {
@@ -640,6 +735,7 @@ async function deleteVote(id) {
 
         await loadVotes({ silent: true });
     });
+    showToast('Voto excluído.', 'success');
 }
 
 async function vote(gender) {
@@ -647,13 +743,15 @@ async function vote(gender) {
     const name = nameInput.value.trim();
 
     if (!name) {
-        alert('Por favor, digite seu nome antes de votar!');
+        showToast('Por favor, digite seu nome antes de votar!', 'error');
+        nameInput.focus();
         return;
     }
 
     await submitVote(name, gender);
     nameInput.value = '';
     triggerCelebration(gender);
+    showToast(`Voto em ${genderLabel(gender)} registrado! 🎉`, gender);
 }
 
 function triggerCelebration(gender) {
@@ -719,7 +817,7 @@ async function loadComments(options = {}) {
 }
 
 async function deleteComment(id) {
-    if (!confirm('Você realmente deseja excluir este comentário?')) return;
+    if (!await confirmDialog('Você realmente deseja excluir este comentário?')) return;
 
     await withLoading(async () => {
         const response = await fetch(`${apiUrl}/comments/${id}?browserId=${browserId}`, {
@@ -732,6 +830,7 @@ async function deleteComment(id) {
 
         await loadComments({ silent: true });
     });
+    showToast('Comentário excluído.', 'success');
 }
 
 async function patchComment(id, name, message) {
@@ -748,6 +847,7 @@ async function patchComment(id, name, message) {
 
         await loadComments({ silent: true });
     });
+    showToast('Comentário atualizado.', 'success');
 }
 
 async function submitComment(event) {
@@ -757,7 +857,7 @@ async function submitComment(event) {
     const message = document.getElementById('comment-message').value.trim();
 
     if (!name || !message) {
-        alert('Por favor, preencha todos os campos.');
+        showToast('Por favor, preencha todos os campos.', 'error');
         return;
     }
 
@@ -778,6 +878,7 @@ async function submitComment(event) {
     });
 
     document.getElementById('comment-form').reset();
+    showToast('Comentário enviado! 💬', 'success');
 }
 
 // ─── Scroll automático ────────────────────────────────────────────────────────
@@ -875,7 +976,7 @@ async function initializeApp() {
         }
     } catch (error) {
         console.error('Erro na inicialização da aplicação:', error.message);
-        alert('Erro ao inicializar a aplicação. Verifique sua conexão.');
+        showToast('Erro ao inicializar a aplicação. Verifique sua conexão.', 'error', 8000);
     }
 }
 

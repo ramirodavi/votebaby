@@ -100,6 +100,17 @@
         </div>
     </div>
 
+    <div id="modal-confirm" class="modal-overlay" hidden>
+        <div class="modal-dialog" role="alertdialog" aria-labelledby="modal-confirm-title" aria-describedby="modal-confirm-message">
+            <h3 id="modal-confirm-title">Tem certeza?</h3>
+            <p class="modal-hint" id="modal-confirm-message"></p>
+            <button type="button" class="modal-danger-btn" id="modal-confirm-ok">Excluir</button>
+            <button type="button" class="modal-cancel-btn" id="modal-confirm-cancel">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
     <script src="./js/scripts.js"></script>      
 </body>
 </html>

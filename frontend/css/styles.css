@@ -18,6 +18,8 @@
     --border: rgba(61, 53, 71, 0.12);
     --focus-ring: rgba(61, 53, 71, 0.25);
     --accent-gradient: linear-gradient(90deg, var(--girl-color), var(--boy-color));
+    --success: #2ecc71;
+    --danger: #e0565b;
 
     --radius-sm: 10px;
     --radius-md: 16px;
@@ -103,6 +105,11 @@ textarea {
 
 button {
     cursor: pointer;
+}
+
+button:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
 }
 
 input,
@@ -632,6 +639,7 @@ textarea {
 }
 
 .modal-primary-btn,
+.modal-danger-btn,
 .modal-cancel-btn {
     display: block;
     width: 100%;
@@ -649,6 +657,11 @@ textarea {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
+.modal-danger-btn {
+    background: var(--danger);
+    color: #fff;
+}
+
 .modal-cancel-btn {
     margin-top: var(--space-2);
     background: var(--surface-soft);
@@ -656,8 +669,81 @@ textarea {
 }
 
 .modal-primary-btn:hover,
+.modal-danger-btn:hover,
 .modal-cancel-btn:hover {
     filter: brightness(0.96);
+}
+
+/* ─── Avisos (toasts) ─────────────────────────────────────────────────────── */
+
+.toast-container {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+    z-index: 10100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    width: min(420px, calc(100% - 2 * var(--space-4)));
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.toast {
+    --toast-accent: var(--text-muted);
+    width: 100%;
+    padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + 6px);
+    border-radius: var(--radius-md);
+    background: var(--surface-solid);
+    box-shadow: inset 6px 0 0 var(--toast-accent), var(--shadow-lg);
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    pointer-events: auto;
+    animation: toast-in 0.2s ease-out;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.toast--success {
+    --toast-accent: var(--success);
+}
+
+.toast--error {
+    --toast-accent: var(--danger);
+}
+
+.toast--boy {
+    --toast-accent: var(--boy-color);
+}
+
+.toast--girl {
+    --toast-accent: var(--girl-color);
+}
+
+.toast--leaving {
+    opacity: 0;
+    transform: translateY(8px);
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+/* ─── Estados vazios ──────────────────────────────────────────────────────── */
+
+.empty-state {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: var(--space-4);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    font-weight: 700;
+    text-align: center;
 }
 
 /* ─── Indicador de conexão em tempo real ──────────────────────────────────── */
