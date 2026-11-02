@@ -466,15 +466,38 @@ async function loadConfig() {
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 
+const CONNECTION_LABELS = {
+    connecting: 'Conectando…',
+    online: 'Ao vivo',
+    offline: 'Reconectando…',
+};
+
+function setConnectionStatus(state) {
+    const el = document.getElementById('connection-status');
+    if (!el) return;
+    el.dataset.state = state;
+    el.textContent = CONNECTION_LABELS[state];
+}
+
+/** Recarrega votos e comentários sem overlay (recupera eventos perdidos enquanto desconectado). */
+function refreshAll() {
+    return Promise.all([loadVotes({ silent: true }), loadComments({ silent: true })]);
+}
+
 function initializeWebSocket() {
     let reconnectDelay = 1000;
+    let reconnectTimer = null;
+    let socket = null;
 
     function connect() {
-        const socket = new WebSocket(webSocketUrl);
+        reconnectTimer = null;
+        socket = new WebSocket(webSocketUrl);
 
         socket.onopen = () => {
             console.log('Conexão com WebSocket estabelecida:', webSocketUrl);
             reconnectDelay = 1000;
+            setConnectionStatus('online');
+            refreshAll();
         };
 
         socket.onmessage = async (event) => {
@@ -496,13 +519,27 @@ function initializeWebSocket() {
         };
 
         socket.onclose = () => {
+            setConnectionStatus('offline');
             console.warn(`Conexão com WebSocket encerrada. Reconectando em ${reconnectDelay / 1000}s...`);
-            setTimeout(() => {
+            reconnectTimer = setTimeout(() => {
                 reconnectDelay = Math.min(reconnectDelay * 2, 30000);
                 connect();
             }, reconnectDelay);
         };
     }
+
+    // No celular a ligação cai com a tela bloqueada: ao voltar, reconecta já (sem esperar o backoff)
+    // ou, se ainda estiver ligada, busca o que pode ter mudado enquanto a página estava oculta.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectDelay = 1000;
+            connect();
+        } else if (socket.readyState === WebSocket.OPEN) {
+            refreshAll();
+        }
+    });
 
     connect();
 }
@@ -527,7 +564,7 @@ async function loadVotes(options = {}) {
             const votes = await fetchVotesJson();
             updateUI(votes);
         } catch (err) {
-            console.error('Erro ao atualizar votos (WebSocket):', err.message);
+            console.error('Erro ao atualizar votos:', err.message);
         }
         return;
     }
@@ -551,6 +588,9 @@ async function submitVote(name, gender) {
         if (!response.ok) {
             throw new Error(await readErrorMessage(response, 'Erro ao registrar voto. Por favor, tente novamente.'));
         }
+
+        // Não depende do WebSocket: se a ligação estiver em baixo, o voto aparece na mesma.
+        await loadVotes({ silent: true });
     });
 }
 
@@ -567,6 +607,8 @@ async function deleteVote(id) {
             console.error('Erro ao excluir voto:', errorMessage);
             throw new Error('Você não tem permissão para excluir este voto.');
         }
+
+        await loadVotes({ silent: true });
     });
 }
 
@@ -635,7 +677,7 @@ async function loadComments(options = {}) {
             const comments = await fetchCommentsJson();
             updateCommentUI(comments);
         } catch (err) {
-            console.error('Erro ao atualizar comentários (WebSocket):', err.message);
+            console.error('Erro ao atualizar comentários:', err.message);
         }
         return;
     }
@@ -658,7 +700,7 @@ async function deleteComment(id) {
             throw new Error('Você não tem permissão para excluir este comentário.');
         }
 
-        await loadComments();
+        await loadComments({ silent: true });
     });
 }
 
@@ -674,7 +716,7 @@ async function patchComment(id, name, message) {
             throw new Error(await readErrorMessage(response, 'Erro ao atualizar comentário.'));
         }
 
-        await loadComments();
+        await loadComments({ silent: true });
     });
 }
 
@@ -702,7 +744,7 @@ async function submitComment(event) {
             throw new Error(await readErrorMessage(response, 'Erro ao enviar comentário. Por favor, tente novamente mais tarde.'));
         }
 
-        await loadComments();
+        await loadComments({ silent: true });
     });
 
     document.getElementById('comment-form').reset();

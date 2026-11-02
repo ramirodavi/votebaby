@@ -522,3 +522,43 @@ button:hover {
 .modal-cancel-btn:hover {
     background: #d0d0d0;
 }
+
+/* Indicador de conexão em tempo real */
+.connection-status {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    font-size: 0.8em;
+    color: #555;
+}
+
+.connection-status::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #aaa;
+}
+
+.connection-status[data-state="online"]::before {
+    background: #2ecc71;
+}
+
+.connection-status[data-state="offline"]::before {
+    background: #e67e22;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0.3;
+    }
+}
