@@ -443,8 +443,8 @@ function updateRevealUI() {
         startBalloonAndConfettiAnimation();
     }
 
-    document.querySelector('.boy-name strong').textContent = `${babyBoyName}:`;
-    document.querySelector('.girl-name strong').textContent = `${babyGirlName}:`;
+    document.getElementById('boy-team-name').textContent = babyBoyName;
+    document.getElementById('girl-team-name').textContent = babyGirlName;
     ['vote-boy', 'modal-vote-boy'].forEach(id => { document.getElementById(id).textContent = babyBoyName; });
     ['vote-girl', 'modal-vote-girl'].forEach(id => { document.getElementById(id).textContent = babyGirlName; });
 }
@@ -495,6 +495,78 @@ function renderEmptyState(container, message) {
     container.appendChild(p);
 }
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** Linha abaixo da barra: quem está na frente, empate ou nenhum voto. */
+function scoreStatus(boyVotes, girlVotes) {
+    const total = boyVotes + girlVotes;
+    if (!total) return 'Nenhum voto ainda';
+    const totalText = `${plural(total, 'voto')} no total`;
+    if (boyVotes === girlVotes) return `Empate! 🤝 · ${totalText}`;
+    const leader = genderLabel(boyVotes > girlVotes ? 'boy' : 'girl');
+    return `${leader} na frente por ${plural(Math.abs(boyVotes - girlVotes), 'voto')} · ${totalText}`;
+}
+
+function initials(name) {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+}
+
+// Votos já exibidos no histórico (id → time): só votos novos ou que trocaram de time são animados.
+let renderedVotes = null;
+
+function renderTeamColumn(gender, votes) {
+    const column = document.createElement('div');
+    column.className = `team-column team-column--${gender}`;
+
+    const title = document.createElement('h4');
+    const label = document.createElement('span');
+    label.textContent = `Time ${genderLabel(gender)}`;
+    const count = document.createElement('span');
+    count.textContent = votes.length;
+    title.append(label, count);
+    column.appendChild(title);
+
+    if (votes.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'team-column-empty';
+        empty.textContent = 'Ninguém ainda';
+        column.appendChild(empty);
+        return column;
+    }
+
+    const list = document.createElement('ul');
+    list.className = 'vote-chips';
+    votes.forEach((vote) => {
+        const chip = document.createElement('li');
+        chip.className = 'vote-chip';
+        if (renderedVotes && renderedVotes.get(vote.id) !== vote.gender) {
+            chip.classList.add('vote-chip--new');
+        }
+
+        const avatar = document.createElement('span');
+        avatar.className = 'avatar';
+        avatar.setAttribute('aria-hidden', 'true');
+        avatar.textContent = initials(vote.name);
+
+        const name = document.createElement('span');
+        name.className = 'chip-name';
+        name.textContent = vote.name;
+        name.title = vote.name;
+
+        chip.append(avatar, name);
+
+        if (isBrowserOwner(vote.browser_id)) {
+            chip.classList.add('entry--mine');
+            chip.appendChild(createEntryActionsButton((anchor) => {
+                toggleActionsMenu(anchor, { type: 'vote', vote, comment: null });
+            }));
+        }
+        list.appendChild(chip);
+    });
+    column.appendChild(list);
+    return column;
+}
+
 function updateUI(votes) {
     document.querySelector('.vote-section').classList.remove('is-loading');
 
@@ -503,18 +575,16 @@ function updateUI(votes) {
     const total = boyVotes + girlVotes;
 
     const boyPct = total ? Math.round(boyVotes / total * 100) : 0;
-    const girlPct = total ? Math.round(girlVotes / total * 100) : 0;
+    // Complemento (e não um segundo arredondamento): os dois somam sempre 100%.
+    const girlPct = total ? 100 - boyPct : 0;
 
-    const boyBar = document.getElementById('boy-bar');
-    const girlBar = document.getElementById('girl-bar');
-
-    boyBar.style.width = `${boyPct}%`;
-    boyBar.textContent = `${boyPct}%`;
-    girlBar.style.width = `${girlPct}%`;
-    girlBar.textContent = `${girlPct}%`;
-
+    document.getElementById('boy-bar').style.width = `${boyPct}%`;
+    document.getElementById('girl-bar').style.width = `${girlPct}%`;
     document.getElementById('boy-count').textContent = boyVotes;
     document.getElementById('girl-count').textContent = girlVotes;
+    document.getElementById('boy-pct').textContent = `${boyPct}%`;
+    document.getElementById('girl-pct').textContent = `${girlPct}%`;
+    document.getElementById('score-status').textContent = scoreStatus(boyVotes, girlVotes);
     document.getElementById('progress').setAttribute('aria-label', total
         ? `${babyBoyName}: ${boyPct}%, ${babyGirlName}: ${girlPct}%`
         : 'Nenhum voto ainda');
@@ -528,42 +598,16 @@ function updateUI(votes) {
         renderEmptyState(log, revealResult === 'pending'
             ? 'Ninguém votou ainda. Seja o primeiro! 🗳️'
             : 'Nenhum voto registrado.');
+    } else {
+        // Mais recentes no topo de cada coluna.
+        const newestFirst = [...votes].reverse();
+        log.append(
+            renderTeamColumn('boy', newestFirst.filter(v => v.gender === 'boy')),
+            renderTeamColumn('girl', newestFirst.filter(v => v.gender === 'girl'))
+        );
     }
 
-    votes.forEach(vote => {
-        const entry = document.createElement('div');
-        entry.classList.add('vote-entry');
-
-        const nameSpan = document.createElement('span');
-        nameSpan.textContent = vote.name;
-        nameSpan.classList.add('bold');
-
-        const textSpan = document.createElement('span');
-        textSpan.textContent = ' votou em ';
-
-        const genderSpan = document.createElement('span');
-        genderSpan.textContent = genderLabel(vote.gender);
-        genderSpan.classList.add('bold', vote.gender === 'boy' ? 'boy-text' : 'girl-text');
-
-        if (isBrowserOwner(vote.browser_id)) {
-            entry.classList.add('entry--mine');
-            const content = document.createElement('div');
-            content.className = 'entry-content';
-            content.appendChild(nameSpan);
-            content.appendChild(textSpan);
-            content.appendChild(genderSpan);
-            const btn = createEntryActionsButton((anchor) => {
-                toggleActionsMenu(anchor, { type: 'vote', vote, comment: null });
-            });
-            entry.appendChild(content);
-            entry.appendChild(btn);
-        } else {
-            entry.appendChild(nameSpan);
-            entry.appendChild(textSpan);
-            entry.appendChild(genderSpan);
-        }
-        log.appendChild(entry);
-    });
+    renderedVotes = new Map(votes.map(v => [v.id, v.gender]));
 }
 
 function updateCommentUI(comments) {

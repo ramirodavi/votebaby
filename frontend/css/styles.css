@@ -272,48 +272,64 @@ textarea {
     font-weight: 800;
 }
 
-.vote-count {
-    display: flex;
+/* ─── Placar ──────────────────────────────────────────────────────────────── */
+
+.scoreboard {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: center;
     gap: var(--space-2);
-    font-size: 1.15rem;
     margin-bottom: var(--space-3);
 }
 
-.boy-name,
-.girl-name {
-    flex: 1;
+.team {
     display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
+    flex-direction: column;
+    align-items: center;
     min-width: 0;
 }
 
-.boy-name {
-    justify-content: flex-end;
+.team--boy {
     color: var(--boy-ink);
 }
 
-.girl-name {
-    justify-content: flex-start;
+.team--girl {
     color: var(--girl-ink);
 }
 
-.boy-name span,
-.girl-name span {
-    font-size: 1.6rem;
+.team-label {
+    max-width: 100%;
+    font-size: 0.85rem;
     font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.name-separator {
-    color: var(--border);
-    min-width: 12px;
+.team-count {
+    font-size: clamp(2.4rem, 12vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.team-pct {
+    font-weight: 700;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.versus {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-muted);
 }
 
 .progress-container {
     display: flex;
-    height: 36px;
+    height: 16px;
     border-radius: var(--radius-pill);
     background: var(--surface-soft);
     overflow: hidden;
@@ -322,13 +338,6 @@ textarea {
 
 .progress-bar {
     width: 0%;
-    line-height: 36px;
-    color: #fff;
-    font-weight: 800;
-    font-size: 0.95rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
     transition: width 0.6s ease;
 }
 
@@ -338,6 +347,17 @@ textarea {
 
 .girl-bar {
     background: var(--girl-strong);
+}
+
+/* Separador branco entre as duas cores quando ambas têm votos */
+.boy-bar + .girl-bar {
+    box-shadow: inset 2px 0 0 var(--surface-solid);
+}
+
+.score-status {
+    margin: var(--space-3) 0 0;
+    color: var(--text-muted);
+    font-weight: 700;
 }
 
 /* ─── Listas (histórico e comentários) ────────────────────────────────────── */
@@ -351,7 +371,8 @@ textarea {
 }
 
 .vote-log {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
 }
 
 .comment-log {
@@ -359,21 +380,116 @@ textarea {
     margin-top: var(--space-4);
 }
 
-.vote-entry,
+/* Histórico em duas colunas, uma por time */
+.team-column {
+    min-width: 0;
+    padding: var(--space-3) var(--space-1);
+    border-radius: var(--radius-md);
+    background: var(--surface-soft);
+}
+
+.team-column h4 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin: 0 var(--space-1) var(--space-2);
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.team-column--boy h4 {
+    color: var(--boy-ink);
+}
+
+.team-column--girl h4 {
+    color: var(--girl-ink);
+}
+
+.team-column h4 span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.team-column-empty {
+    margin: 0;
+    padding: var(--space-2);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.vote-chips {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.vote-chip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-solid);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.vote-chip--new {
+    animation: chip-in 0.4s ease-out;
+}
+
+@keyframes chip-in {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+}
+
+/* Nome quebra em até duas linhas (colunas estreitas no celular) em vez de ser cortado */
+.vote-chip .chip-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.avatar {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.team-column--boy .avatar {
+    background: var(--boy-strong);
+}
+
+.team-column--girl .avatar {
+    background: var(--girl-strong);
+}
+
 .comment-entry {
     background: var(--surface-solid);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: var(--space-2) var(--space-3);
-    overflow-wrap: anywhere;
-}
-
-.vote-entry {
-    font-size: 0.95rem;
-}
-
-.comment-entry {
     padding: var(--space-3) var(--space-4);
+    overflow-wrap: anywhere;
 }
 
 .comment-entry p {
@@ -386,16 +502,8 @@ textarea {
     box-shadow: 0 0 0 1px var(--text-muted);
 }
 
-.vote-entry.entry--mine {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-2);
-}
-
-.vote-entry .entry-content {
-    flex: 1;
-    min-width: 0;
+.vote-chip .entry-actions-btn {
+    margin: 0 -4px 0 0;
 }
 
 .entry-actions-btn {
@@ -437,10 +545,6 @@ textarea {
     display: block;
     font-size: 0.8rem;
     color: var(--text-muted);
-}
-
-.bold {
-    font-weight: 800;
 }
 
 .boy-text {
@@ -950,7 +1054,8 @@ textarea {
 /* ─── Esqueletos (dados a caminho) ────────────────────────────────────────── */
 
 .skeleton,
-.vote-section.is-loading .vote-count span,
+.vote-section.is-loading .team-count,
+.vote-section.is-loading .team-pct,
 .vote-section.is-loading .progress-container {
     background: linear-gradient(90deg, var(--skeleton) 25%, var(--surface-soft) 50%, var(--skeleton) 75%);
     background-size: 200% 100%;
@@ -969,8 +1074,10 @@ textarea {
     height: 96px;
 }
 
-.vote-section.is-loading .vote-count span {
-    min-width: 1.6em;
+.vote-section.is-loading .team-count,
+.vote-section.is-loading .team-pct,
+.vote-section.is-loading .score-status {
+    min-width: 2.4em;
     border-radius: var(--radius-sm);
     color: transparent;
 }
@@ -993,8 +1100,10 @@ textarea {
     .splash-hint,
     .splash-balloons span,
     .skeleton,
-    .vote-section.is-loading .vote-count span,
-    .vote-section.is-loading .progress-container {
+    .vote-section.is-loading .team-count,
+    .vote-section.is-loading .team-pct,
+    .vote-section.is-loading .progress-container,
+    .vote-chip--new {
         animation: none;
     }
 }
@@ -1004,6 +1113,20 @@ textarea {
 @media (min-width: 640px) {
     .page {
         padding: var(--space-4) var(--space-5) var(--space-6);
+    }
+
+    .team-column {
+        padding: var(--space-3) var(--space-2);
+    }
+
+    .vote-chip {
+        font-size: 0.95rem;
+    }
+
+    .avatar {
+        width: 30px;
+        height: 30px;
+        font-size: 0.75rem;
     }
 
     .vote-section,

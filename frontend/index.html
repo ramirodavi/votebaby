@@ -64,15 +64,25 @@
                 </div>
                 <p id="my-vote" class="my-vote" role="status" hidden></p>
             </form>
-            <div class="vote-count" aria-live="polite" aria-atomic="true">
-                <div class="boy-name"><strong>Menino:</strong> <span id="boy-count">0</span></div>
-                <div class="name-separator" aria-hidden="true"><strong>|</strong></div>
-                <div class="girl-name"><strong>Menina:</strong> <span id="girl-count">0</span></div>
+            <div class="scoreboard" aria-live="polite" aria-atomic="true">
+                <div class="team team--boy">
+                    <span class="team-label">Time <span id="boy-team-name">Menino</span></span>
+                    <span class="team-count" id="boy-count">0</span>
+                    <span class="team-pct" id="boy-pct">0%</span>
+                </div>
+                <div class="versus" aria-hidden="true">×</div>
+                <div class="team team--girl">
+                    <span class="team-label">Time <span id="girl-team-name">Menina</span></span>
+                    <span class="team-count" id="girl-count">0</span>
+                    <span class="team-pct" id="girl-pct">0%</span>
+                </div>
             </div>
+            <!-- Barra sem texto: os percentuais ficam no placar (legíveis com qualquer cor do tema) -->
             <div class="progress-container" id="progress" role="img" aria-label="Nenhum voto ainda">
-                <div id="boy-bar" class="progress-bar boy-bar">0%</div>
-                <div id="girl-bar" class="progress-bar girl-bar">0%</div>
+                <div id="boy-bar" class="progress-bar boy-bar"></div>
+                <div id="girl-bar" class="progress-bar girl-bar"></div>
             </div>
+            <p class="score-status" id="score-status">Nenhum voto ainda</p>
         </div>
 
         <div class="log-container">
