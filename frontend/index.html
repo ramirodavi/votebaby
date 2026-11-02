@@ -86,7 +86,7 @@
         </div>
 
         <div class="log-container">
-            <h3>🗳️ Histórico de votos</h3>
+            <h3 id="log-title">🗳️ Histórico de votos</h3>
             <div class="vote-log" id="log">
                 <!-- Esqueletos até os votos chegarem (substituídos por updateUI) -->
                 <div class="skeleton skeleton--chip"></div>
@@ -149,6 +149,16 @@
     </div>
 
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <!-- Sequência da revelação (primeira visita após revelar): contagem, cor do resultado e frase -->
+    <div id="reveal-show" class="reveal-show" hidden role="alert" aria-live="assertive">
+        <p class="reveal-show-count" id="reveal-show-count"></p>
+        <div class="reveal-show-result" id="reveal-show-result" hidden>
+            <p class="reveal-show-title" id="reveal-show-title"></p>
+            <p class="reveal-show-text" id="reveal-show-text"></p>
+        </div>
+        <p class="reveal-show-skip">Toque para pular</p>
+    </div>
 
     <script src="./js/scripts.js"></script>      
 </body>

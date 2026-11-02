@@ -436,12 +436,18 @@ function updateRevealUI() {
         voteSection.querySelector('.input-container').style.display = 'none';
         voteSection.querySelector('.buttons').style.display = 'none';
 
-        const emoji = revealResult === 'girl' ? '🎀' : '🚗';
-        revealDiv.innerHTML = `
-            ${emoji} ${revealResult === 'girl' ? 'É uma menina!' : 'É um menino!'} ${emoji}
-            <br>
-            <span style="font-size: 1.5em; font-style: italic;">${revealText}</span>
-        `;
+        // textContent: REVEAL_TEXT é exibido como texto, nunca interpretado como HTML.
+        const headline = document.createElement('span');
+        headline.className = 'revelacao-title';
+        headline.textContent = revealHeadline();
+        revealDiv.replaceChildren(headline);
+        if (revealText) {
+            const text = document.createElement('span');
+            text.className = 'revelacao-text';
+            text.textContent = revealText;
+            revealDiv.appendChild(text);
+        }
+        document.getElementById('log-title').textContent = '🎯 Quem acertou?';
         revealDiv.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--reveal-bg-color').trim();
         revealDiv.style.color = 'white';
         startBalloonAndConfettiAnimation();
@@ -451,6 +457,11 @@ function updateRevealUI() {
     document.getElementById('girl-team-name').textContent = babyGirlName;
     ['vote-boy', 'modal-vote-boy'].forEach(id => { document.getElementById(id).textContent = babyBoyName; });
     ['vote-girl', 'modal-vote-girl'].forEach(id => { document.getElementById(id).textContent = babyGirlName; });
+}
+
+function revealHeadline() {
+    // Espaços não separáveis: o emoji nunca fica sozinho numa linha.
+    return revealResult === 'girl' ? '🎀 É uma menina! 🎀' : '🚗 É um menino! 🚗';
 }
 
 // Rótulo de cada opção de voto (nomes configurados em BABY_BOY_NAME / BABY_GIRL_NAME).
@@ -465,15 +476,17 @@ function findMyVote(name) {
     return votesState.find(v => isBrowserOwner(v.browser_id) && v.name === formatted) || null;
 }
 
-/** Destaca o botão do voto atual e mostra "Fulano, você votou em X" para o nome digitado. */
+/**
+ * Antes da revelação: destaca o botão do voto atual e mostra "Fulano, você votou em X" para o nome digitado.
+ * Depois: diz se a pessoa acertou.
+ */
 function updateMyVoteUI() {
-    const mine = revealResult === 'pending'
-        ? findMyVote(document.getElementById('name-input').value)
-        : null;
+    const revealed = revealResult !== 'pending';
+    const mine = findMyVote(document.getElementById('name-input').value);
 
     ['boy', 'girl'].forEach((gender) => {
         const btn = document.getElementById(`vote-${gender}`);
-        const selected = mine?.gender === gender;
+        const selected = !revealed && mine?.gender === gender;
         btn.classList.toggle('is-selected', selected);
         btn.setAttribute('aria-pressed', String(selected));
     });
@@ -481,6 +494,15 @@ function updateMyVoteUI() {
     const status = document.getElementById('my-vote');
     status.hidden = !mine;
     if (!mine) return;
+
+    if (revealed) {
+        const hit = mine.gender === revealResult;
+        status.classList.toggle('my-vote--hit', hit);
+        status.textContent = hit
+            ? `🎯 ${mine.name}, você acertou!`
+            : `😅 ${mine.name}, não foi dessa vez… mas o bebê vai te amar mesmo assim!`;
+        return;
+    }
 
     const choice = document.createElement('strong');
     choice.className = mine.gender === 'boy' ? 'boy-text' : 'girl-text';
@@ -504,9 +526,14 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // Percentual mínimo de uma parte da barra para exibir o texto dentro dela.
 const MIN_PCT_LABEL = 12;
 
-/** Linha abaixo da barra: quem está na frente, empate ou nenhum voto. */
+/** Linha abaixo da barra: quem está na frente, empate ou nenhum voto; após a revelação, quantos acertaram. */
 function scoreStatus(boyVotes, girlVotes) {
     const total = boyVotes + girlVotes;
+    if (revealResult !== 'pending') {
+        if (!total) return 'Ninguém votou 😅';
+        const hits = revealResult === 'boy' ? boyVotes : girlVotes;
+        return `🎉 ${Math.round(hits / total * 100)}% acertaram! (${hits} de ${plural(total, 'voto')})`;
+    }
     if (!total) return 'Nenhum voto ainda';
     const totalText = `${plural(total, 'voto')} no total`;
     if (boyVotes === girlVotes) return `Empate! 🤝 · ${totalText}`;
@@ -521,13 +548,22 @@ function initials(name) {
 // Votos já exibidos no histórico (id → time): só votos novos ou que trocaram de time são animados.
 let renderedVotes = null;
 
+/** Título da coluna: o time antes da revelação; depois, quem acertou e quem errou. */
+function teamColumnTitle(gender) {
+    if (revealResult === 'pending') return `Time ${genderLabel(gender)}`;
+    return gender === revealResult ? 'Acertaram' : 'Quase!';
+}
+
 function renderTeamColumn(gender, votes) {
     const column = document.createElement('div');
     column.className = `team-column team-column--${gender}`;
+    if (revealResult !== 'pending') {
+        column.classList.add(gender === revealResult ? 'team-column--winner' : 'team-column--loser');
+    }
 
     const title = document.createElement('h4');
     const label = document.createElement('span');
-    label.textContent = `Time ${genderLabel(gender)}`;
+    label.textContent = teamColumnTitle(gender);
     const count = document.createElement('span');
     count.textContent = votes.length;
     title.append(label, count);
@@ -600,6 +636,13 @@ function updateUI(votes) {
         ? `${babyBoyName}: ${boyPct}%, ${babyGirlName}: ${girlPct}%`
         : 'Nenhum voto ainda');
 
+    // Após a revelação: time vencedor em destaque no placar.
+    ['boy', 'girl'].forEach((gender) => {
+        const team = document.querySelector(`.team--${gender}`);
+        team.classList.toggle('team--winner', revealResult === gender);
+        team.classList.toggle('team--loser', revealResult !== 'pending' && revealResult !== gender);
+    });
+
     updateMyVoteUI();
 
     const log = document.getElementById('log');
@@ -610,12 +653,10 @@ function updateUI(votes) {
             ? 'Ninguém votou ainda. Seja o primeiro! 🗳️'
             : 'Nenhum voto registrado.');
     } else {
-        // Mais recentes no topo de cada coluna.
+        // Mais recentes no topo de cada coluna; após a revelação, quem acertou vem primeiro.
         const newestFirst = [...votes].reverse();
-        log.append(
-            renderTeamColumn('boy', newestFirst.filter(v => v.gender === 'boy')),
-            renderTeamColumn('girl', newestFirst.filter(v => v.gender === 'girl'))
-        );
+        const order = revealResult === 'boy' || revealResult === 'pending' ? ['boy', 'girl'] : ['girl', 'boy'];
+        log.append(...order.map(gender => renderTeamColumn(gender, newestFirst.filter(v => v.gender === gender))));
     }
 
     renderedVotes = new Map(votes.map(v => [v.id, v.gender]));
@@ -956,7 +997,13 @@ function handleVoteFormSubmit(event) {
     if (!mine) showToast(`Agora escolha: ${babyBoyName} ou ${babyGirlName}? 👇`);
 }
 
-function triggerCelebration(gender) {
+function prefersReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function triggerCelebration(gender, confettiCount = 50) {
+    if (prefersReducedMotion()) return;
+
     const confettiContainer = document.createElement('div');
     confettiContainer.classList.add('confetti-container');
     document.body.appendChild(confettiContainer);
@@ -975,7 +1022,7 @@ function triggerCelebration(gender) {
         confettiContainer.appendChild(balloon);
     }
 
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < confettiCount; i++) {
         const confetti = document.createElement('div');
         confetti.classList.add('confetti');
         confetti.style.backgroundColor = Math.random() > 0.5 ? color : '#FFF';
@@ -1117,8 +1164,10 @@ function startAutoScroll(speed, interval) {
 // ─── Animação de balões e confetes ────────────────────────────────────────────
 
 function startBalloonAndConfettiAnimation() {
+    if (prefersReducedMotion()) return;
+
     const balloonContainer = document.querySelector('.balloon-container');
-    const MAX_BALLOONS = 50;
+    const MAX_BALLOONS = 40;
 
     function createBalloon() {
         if (balloonContainer.children.length >= MAX_BALLOONS) {
@@ -1150,10 +1199,85 @@ function startBalloonAndConfettiAnimation() {
         confetti.addEventListener('animationend', () => confetti.remove());
     }
 
+    // Com a aba oculta não cria elementos (economiza bateria e não acumula ao voltar).
     setInterval(() => {
+        if (document.hidden) return;
         createBalloon();
         createConfetti();
-    }, 500);
+    }, 800);
+}
+
+// ─── O grande momento (sequência da revelação) ────────────────────────────────
+
+// Resultado cuja sequência este navegador já viu: nas visitas seguintes a página abre direto revelada.
+const REVEAL_SEEN_KEY = 'revealSeen';
+
+/** Reinicia a animação CSS de um elemento (para "pulsar" a cada número da contagem). */
+function replayAnimation(el, className) {
+    el.classList.remove(className);
+    void el.offsetWidth;
+    el.classList.add(className);
+}
+
+/**
+ * Contagem 3-2-1 → tela na cor do resultado → confetes → "É uma menina!/É um menino!".
+ * Toque em qualquer lugar pula. Com "reduzir movimento" mostra só o resultado.
+ */
+function playRevealShow() {
+    return new Promise((resolve) => {
+        const show = document.getElementById('reveal-show');
+        const count = document.getElementById('reveal-show-count');
+        const result = document.getElementById('reveal-show-result');
+        const timers = [];
+        const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+
+        document.getElementById('reveal-show-title').textContent = revealHeadline();
+        document.getElementById('reveal-show-text').textContent = revealText;
+
+        const revealNow = () => {
+            count.hidden = true;
+            result.hidden = false;
+            show.classList.add('reveal-show--revealed');
+            navigator.vibrate?.([200, 100, 200, 100, 400]);
+            triggerCelebration(revealResult, 120);
+        };
+
+        let finished = false;
+        const finish = () => {
+            if (finished) return;
+            finished = true;
+            timers.forEach(clearTimeout);
+            show.classList.add('reveal-show--leaving');
+            // Espera o fade-out (sem transições com "reduzir movimento").
+            setTimeout(() => {
+                show.hidden = true;
+                resolve();
+            }, prefersReducedMotion() ? 0 : 500);
+        };
+        show.addEventListener('click', finish, { once: true });
+        show.hidden = false;
+
+        if (prefersReducedMotion()) {
+            revealNow();
+            at(3000, finish);
+            return;
+        }
+
+        count.textContent = 'Prontos?';
+        ['3', '2', '1'].forEach((n, i) => at(1300 + i * 1000, () => {
+            count.textContent = n;
+            replayAnimation(count, 'pop');
+        }));
+        at(4300, revealNow);
+        at(9000, finish);
+    });
+}
+
+/** Na primeira visita após a revelação (por navegador e resultado), toca a sequência. */
+async function maybePlayRevealShow() {
+    if (revealResult === 'pending' || localStorage.getItem(REVEAL_SEEN_KEY) === revealResult) return;
+    await playRevealShow();
+    localStorage.setItem(REVEAL_SEEN_KEY, revealResult);
 }
 
 // ─── Tela de carregamento ─────────────────────────────────────────────────────
@@ -1210,6 +1334,9 @@ async function initializeApp() {
         commentsState = comments;
         updateCommentUI(commentsState);
 
+        // Com os dados já na tela, por trás da sequência ("quem acertou" pronto ao terminar).
+        await maybePlayRevealShow();
+
         if (revealResult !== 'pending' && enableAutoScroll) {
             startAutoScroll(2, 50);
         }
@@ -1232,15 +1359,3 @@ document.getElementById('splash-retry').addEventListener('click', () => window.l
 
 // Não espera o window.onload (fontes e imagens): o pedido ao servidor começa o quanto antes.
 initializeApp();
-
-window.onload = () => {
-    const div = document.getElementById('revelacao');
-    div.style.opacity = 0;
-    let opacity = 0;
-
-    const fadeIn = setInterval(() => {
-        opacity += 0.02;
-        div.style.opacity = opacity;
-        if (opacity >= 1) clearInterval(fadeIn);
-    }, 30);
-};
