@@ -26,6 +26,12 @@ function validateMessage(message) {
     return null;
 }
 
+/** Comentários novos: sempre antes da revelação; depois dela, só com ALLOW_COMMENTS_AFTER_REVEAL=true. */
+function commentsOpen() {
+    const revealed = (process.env.REVEAL_RESULT || 'pending') !== 'pending';
+    return !revealed || process.env.ALLOW_COMMENTS_AFTER_REVEAL === 'true';
+}
+
 /** Apenas tabelas com colunas id e browser_id (whitelist). Retorna a linha ou null. */
 async function selectRowOwnedByBrowser(pool, table, id, browserId) {
     if (table !== 'votes' && table !== 'comments') {
@@ -38,4 +44,4 @@ async function selectRowOwnedByBrowser(pool, table, id, browserId) {
     return result.rows[0] || null;
 }
 
-module.exports = { formatName, validateName, validateMessage, selectRowOwnedByBrowser };
+module.exports = { formatName, validateName, validateMessage, commentsOpen, selectRowOwnedByBrowser };

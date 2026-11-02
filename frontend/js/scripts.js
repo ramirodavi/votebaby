@@ -214,6 +214,12 @@ let revealBgBoyColor = 'rgb(172, 241, 197)';
 let revealBgGirlColor = 'rgb(231, 179, 223)';
 
 let enableAutoScroll = false;
+let allowCommentsAfterReveal = false;
+
+/** Comentários novos: sempre antes da revelação; depois, só com ALLOW_COMMENTS_AFTER_REVEAL=true. */
+function commentsOpen() {
+    return revealResult === 'pending' || allowCommentsAfterReveal;
+}
 
 // Listas atuais, na mesma ordem do backend (votos por id crescente, comentários decrescente).
 let votesState = [];
@@ -430,13 +436,15 @@ function updateRevealUI() {
         revealDiv.style.display = 'block';
         voteSection.style.display = 'block';
         commentSection.style.display = 'block';
-        // Depois da revelação é quando os convidados querem parabenizar: o formulário continua aberto.
-        commentForm.style.display = 'block';
+        // Recados após a revelação só se ALLOW_COMMENTS_AFTER_REVEAL=true; senão fica só a lista.
+        commentForm.style.display = commentsOpen() ? 'block' : 'none';
         commentLog.style.display = 'block';
         balloonContainer.style.display = 'block';
 
-        document.getElementById('comment-title').textContent = '💌 Deixe um recado para o bebê';
-        document.getElementById('comment-message').placeholder = 'Escreva seu recado para o bebê e os papais...';
+        if (allowCommentsAfterReveal) {
+            document.getElementById('comment-title').textContent = '💌 Deixe um recado para o bebê';
+            document.getElementById('comment-message').placeholder = 'Escreva seu recado para o bebê e os papais...';
+        }
 
         voteSection.querySelector('h2').style.display = 'none';
         voteSection.querySelector('.input-container').style.display = 'none';
@@ -467,7 +475,7 @@ function updateRevealUI() {
 
 function revealHeadline() {
     // Espaços não separáveis: o emoji nunca fica sozinho numa linha.
-    return revealResult === 'girl' ? '🎀 É uma menina! 🎀' : '🚗 É um menino! 🚗';
+    return revealResult === 'girl' ? '🎀\u00A0É uma menina!\u00A0🎀' : '🚗\u00A0É um menino!\u00A0🚗';
 }
 
 // Rótulo de cada opção de voto (nomes configurados em BABY_BOY_NAME / BABY_GIRL_NAME).
@@ -696,9 +704,10 @@ function updateCommentUI(comments) {
     commentLog.innerHTML = '';
 
     if (comments.length === 0) {
-        renderEmptyState(commentLog, revealResult === 'pending'
-            ? 'Nenhum recado ainda. Deixe o primeiro! 💬'
-            : 'Nenhum recado ainda. Deixe o primeiro! 💌');
+        let emptyMessage = 'Nenhum comentário.';
+        if (revealResult === 'pending') emptyMessage = 'Nenhum recado ainda. Deixe o primeiro! 💬';
+        else if (commentsOpen()) emptyMessage = 'Nenhum recado ainda. Deixe o primeiro! 💌';
+        renderEmptyState(commentLog, emptyMessage);
     }
 
     comments.forEach(comment => {
@@ -769,6 +778,7 @@ async function loadConfig() {
     babyGirlName = config.babyGirlName;
     revealResult = config.revealResult;
     enableAutoScroll = config.enableAutoScroll;
+    allowCommentsAfterReveal = config.allowCommentsAfterReveal === true;
     revealText = config.revealText;
     boyColor = config.boyColor;
     bgBoyColor = config.bgBoyColor;
@@ -1320,9 +1330,10 @@ function guestUrl() {
 
 async function renderQrCode() {
     const url = guestUrl();
-    document.getElementById('qr-title').textContent = revealResult === 'pending'
-        ? 'Vote pelo celular! 📱'
-        : 'Deixe seu recado pelo celular! 💌';
+    let qrTitle = 'Acompanhe pelo celular!\u00A0📱';
+    if (revealResult === 'pending') qrTitle = 'Vote pelo celular!\u00A0📱';
+    else if (commentsOpen()) qrTitle = 'Deixe seu recado pelo celular!\u00A0💌';
+    document.getElementById('qr-title').textContent = qrTitle;
     document.getElementById('qr-url').textContent = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
     document.getElementById('qr-card').hidden = false;
 

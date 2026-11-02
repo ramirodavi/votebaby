@@ -1,6 +1,6 @@
 const pool = require('../db');
 const { notifyChange } = require('../websocket');
-const { formatName, validateName, validateMessage, selectRowOwnedByBrowser } = require('../utils/helpers');
+const { formatName, validateName, validateMessage, commentsOpen, selectRowOwnedByBrowser } = require('../utils/helpers');
 
 const DUPLICATE_COMMENT_ERROR = 'Já existe um comentário idêntico para este nome.';
 
@@ -15,6 +15,11 @@ async function getComments(req, res) {
 
 async function addComment(req, res) {
     const { name, message, browserId } = req.body;
+
+    // Também no servidor: uma página aberta antes da revelação ainda mostraria o formulário.
+    if (!commentsOpen()) {
+        return res.status(403).json({ error: 'Os comentários foram encerrados após a revelação.' });
+    }
 
     if (!name || !message) {
         return res.status(400).json({ error: 'Nome e mensagem são obrigatórios.' });
